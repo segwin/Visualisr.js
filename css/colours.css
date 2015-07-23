@@ -1,0 +1,56 @@
+body {
+	font-size: 16px;
+	font-family: 'Open Sans', 'Helvetica Neue', Tahoma, sans-serif;
+	font-weight: 100;
+	background-color: white;
+	color: #2a2a2a;
+}
+
+a {
+	color: #2a2a2a;
+	font-weight: bold;
+	text-decoration: none;
+}
+
+a:hover { text-decoration: underline; }
+nav a { font-weight: 100; }
+
+
+/**
+ * 	Data table
+ */
+
+#data-table { background-color: transparent; }
+#data-table-overlay { background-color: rgba(0,0,0,0.85); }
+#data-table tr { background-color: white; }
+
+#data-table #row-selection {
+	background-color: transparent;
+	color: white;
+}
+
+#data-table tr#col-select-header { background-color: transparent; }
+#data-table #col-select-header th { color: white; }
+
+#data-table #col-select-header .ui-state-highlight {
+	background-color: #000;
+}
+
+
+/**
+ * 	Timeline
+ */
+
+#timeline {
+	color: #eee;
+	background-color: #1a1a1a;
+}
+
+#timeline a { color: #fff; }
+
+
+/**
+ * 	Footer
+ */
+
+footer, footer a { color: #5a5a5a; }
