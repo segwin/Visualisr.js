@@ -89,7 +89,7 @@ function generateColSelectHeader(nCols) {
 			out: function() {
 				$(this).droppable("option", "accept", "*");
 			}
-		})
+		});
 		
 		$("#col-select-header").append(col);
 	}
@@ -119,7 +119,7 @@ function handleFile() {
 	reader.readAsText(files[0]);	// read first File() object in files (a FileList() object)
 	
 	reader.onload = function(event) {	// get data once file is read
-		console.log("Successfully read file: " + files[0].name)
+		console.log("Successfully read file: " + files[0].name);
 		csvData = reader.result;
 		
 		// parse data
@@ -143,7 +143,7 @@ function handleFile() {
 			// add column selection header to table
 			generateColSelectHeader(nCols);
 		}
-	}
+	};
 }
 
 function submitDataTable() {
@@ -155,8 +155,8 @@ function submitDataTable() {
 	timeCol = $("#data-table .col-"+selTimeCol).children().contents();
 	dataCol = $("#data-table .col-"+selDataCol).children().contents();
 	
-	$.each(timeCol, function(i, time) { timeCol[i] = time.data; })
-	$.each(dataCol, function(i, datum) { dataCol[i] = datum.data; })
+	$.each(timeCol, function(i, time) { timeCol[i] = time.data; });
+	$.each(dataCol, function(i, datum) { dataCol[i] = datum.data; });
 	
 	// close and empty #data-table
 	$("#data-table-overlay").fadeOut(300);
@@ -174,11 +174,11 @@ function generateDataColours(nPoints) {
 	// check if cfg colours are valid hex values
 	var regex = new RegExp(/^#[0-9A-F]{6}$/i);
 	if (regex.test(timelineStartColour.slice(1,7))) {	// if check fails, substitute default (red)
-		console.log("Invalid value in canvas.cfg.js: timelineStartColor = " + timelineStartColour)
+		console.log("Invalid value in canvas.cfg.js: timelineStartColor = " + timelineStartColour);
 		timelineStartColour = "#FF0000";
 	}
 	if (regex.test(timelineEndColour.slice(1,7))) {	// if check fails, substitute default (blue)
-		console.log("Invalid value in canvas.cfg.js: timelineEndColor = " + timelineEndColour)
+		console.log("Invalid value in canvas.cfg.js: timelineEndColor = " + timelineEndColour);
 		timelineEndColour = "#0000FF";
 	}
 	
@@ -265,7 +265,7 @@ function updateAxisPoints() {
 	topY = Math.floor(-canvas.height + 2*timelinePadding);
 	midY = Math.floor(topY/2);
 	
-	rightX = Math.floor(canvas.width - 2*timelinePadding)
+	rightX = Math.floor(canvas.width - 2*timelinePadding);
 	midX = Math.floor(rightX/2);
 }
 
@@ -402,14 +402,14 @@ $(document).ready(function() {
 		$("#data-table-submit").on("click", function(event) {
 			event.preventDefault();
 			submitDataTable();
-		})
+		});
 	}
 	else {
 		// TODO: fallback code
 		$("#timeline").css({
 			"width": "100%",
 			"min-height": "130px"
-		})
+		});
 	}
 	
 	// resize canvas on window resize
@@ -421,9 +421,9 @@ $(document).ready(function() {
 		rtime = new Date();
 		if (timeout === false) {
 			timeout = true;
-			setTimeout(resizeEnd, rwait)
+			setTimeout(resizeEnd, rwait);
 		}
-	})
+	});
 
 	function resizeEnd() {
 		if (new Date() - rtime < rwait) {
