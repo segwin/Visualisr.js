@@ -63,7 +63,7 @@
     </canvas>
 
     <footer>
-		<p>&copy; Copyright 2015 <a href="http://segwin.ca/">Eric Seguin</a>. Licensed under <a href="include/gpl-v3.txt">GPL v3.0</a>.</p>
+		<p>&copy; Copyright 2015 <a href="http://segwin.ca/">Eric Seguin</a>. Licensed under <a href="LICENSE">GPL v3.0</a>.</p>
     </footer>
 </body>
 </html>
