@@ -1,0 +1,114 @@
+html, body {
+	max-height: 100%;
+}
+
+
+/* Common elements */
+
+* {
+	box-sizing: border-box;
+	border: none;
+	margin: 0;
+	padding: 0;
+	outline: 0;
+}
+
+p { margin: 0.5em 0; }
+
+.left {
+	display: inline-block;
+	float: left;
+}
+
+.right {
+	display: inline-block;
+	float: right;
+	text-align: right;
+}
+
+
+/* Header */
+
+header {
+	box-sizing: content-box;
+	position: fixed;
+	top: 0;
+	left: 0;
+	height: 120px;
+	width: 100%;
+	padding: 20px;
+}
+
+nav p {
+	display: inline-block;
+	padding-right: 0.8em;
+}
+
+nav p:last-child { padding-right: 0; }
+
+
+/* Data table */
+
+#data-table-container {
+}
+
+#data-table {
+	width: 80%;
+	min-width: 600px;
+	max-height: 90%;
+	overflow: auto;
+	display: block;
+	margin: 40px;
+	position: absolute;
+	top: 0;
+	left: 5%;
+	z-index: 9999;
+}
+
+#data-table-submit {
+	display: block;
+	position: fixed;
+	left: 5%;
+	top:43px;
+	z-index: 9999;
+}
+
+#data-table-overlay {
+	display: block;
+	height: 100%;
+	width: 100%;
+	position: fixed;
+	top: 0;
+	left: 0;
+	z-index: 9900;
+}
+
+#data-table td {
+	padding: 0.8em;
+	text-align: center;
+}
+
+#data-table tr#row-0 {
+	font-weight: bold;
+}
+
+
+/* Timeline */
+
+#timeline {
+	display: block;
+	margin-top: 120px;
+}
+
+#canvas-fallback { padding: 20px; }
+
+
+/* Footer */
+
+footer {
+	font-size: 0.8em;
+	position: fixed;
+	right: 1em;
+	bottom: 0.5em;
+}
+
