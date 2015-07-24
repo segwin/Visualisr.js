@@ -9,9 +9,8 @@
  * Colours
  */
 
-var bgColour = "#1a1a1a";		// background colour
-var axisColour = "#fff";		// axis & notation colour
-var titleColour = "#fff";	// timeline title colour
+var axisColour = "#2a2a2a";		// axis & notation colour
+var titleColour = "#2a2a2a";	// timeline title colour
 
 var timelineStartColour = "#FF0000";	// starting colour on timeline plot points gradient (hexadecimal values only)
 var timelineEndColour = "#0000FF";		// ending colour on timeline plot points (hexadecimal values only)
