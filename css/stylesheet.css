@@ -53,23 +53,14 @@ nav p:last-child { padding-right: 0; }
 }
 
 #data-table {
-	width: 80%;
 	min-width: 600px;
-	max-height: 90%;
+	max-height: 85%;
 	overflow: auto;
 	display: block;
-	margin: 40px;
+	margin: 70px 120px 0 120px;
 	position: absolute;
 	top: 0;
-	left: 5%;
-	z-index: 9999;
-}
-
-#data-table-submit {
-	display: block;
-	position: fixed;
-	left: 5%;
-	top:43px;
+	left: 0;
 	z-index: 9999;
 }
 
@@ -88,8 +79,30 @@ nav p:last-child { padding-right: 0; }
 	text-align: center;
 }
 
-#data-table tr#row-0 {
-	font-weight: bold;
+#data-table-buttons,
+#data-table-submit {
+	z-index: 10000;
+	position: fixed;
+	display: block;
+}
+
+#data-table-buttons {
+	left: 0;
+	top: 70px;
+	width: 110px;
+	text-align: right;
+}
+#data-table-submit {
+	left: 120px;
+	top: 30px;
+	text-align: left;
+}
+
+#data-table-buttons a,
+#data-table-submit {
+	display: block;
+	height: 40px;
+	padding: 0 5px 0 5px;
 }
 
 
@@ -106,7 +119,6 @@ nav p:last-child { padding-right: 0; }
 /* Footer */
 
 footer {
-	font-size: 0.8em;
 	position: fixed;
 	right: 1em;
 	bottom: 0.5em;

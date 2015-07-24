@@ -20,21 +20,43 @@ nav a { font-weight: 100; }
  * 	Data table
  */
 
-#data-table { background-color: transparent; }
-#data-table-overlay { background-color: rgba(0,0,0,0.85); }
+#data-table {
+	background-color: #333;
+	box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+#data-table-overlay { background-color: rgba(0,0,0,0.9); }
 #data-table tr { background-color: white; }
 
-#data-table #row-selection {
-	background-color: transparent;
+#data-table tr#row-0 {
+	background-color: #333;
 	color: white;
+	font-weight: bold;
 }
 
-#data-table tr#col-select-header { background-color: transparent; }
-#data-table #col-select-header th { color: white; }
+#data-table td.selected-x,
+#data-table td.selected-y { color: #fff; }
+#data-table td.selected-x { background-color: #EB009C; }
+#data-table td.selected-y { background-color: #009CEB; }
 
-#data-table #col-select-header .ui-state-highlight {
-	background-color: #000;
+#data-table-buttons a,
+#data-table-submit {
+	color: white;
+	line-height: 40px;
+	text-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
 }
+
+#data-table-buttons a { font-size: 26px; }
+a#data-table-submit { font-size: 22px; }
+
+#data-table-buttons a:hover,
+a#data-table-submit:hover { text-decoration: none; }
+
+a#data-table-submit:hover { color: #9CEB00; }
+#data-table-buttons a#x-picker:hover,
+#data-table-buttons a#x-picker.active { color: #EB009C; }
+#data-table-buttons a#y-picker:hover,
+#data-table-buttons a#y-picker.active { color: #009CEB; }
 
 
 /**
@@ -53,4 +75,5 @@ nav a { font-weight: 100; }
  * 	Footer
  */
 
+footer { font-size: 0.8em; }
 footer, footer a { color: #5a5a5a; }

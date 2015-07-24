@@ -16,8 +16,8 @@ var canvas,
 var topY, midY, rightX, midX;
 
 var data = Array(),
-	timeCol = ["Year", "2000", "2001", "2002", "2002", "2002", "2004", "2006", "2008", "2008", "2008", "2009", "2010", "2010", "2011", "2011", "2011", "2014", "2014", "2014", "2015"],
-	dataCol = ["Volcanic explosivity (VEI)", "4", "4", "1", "4", "4", "4", "4", "4", "4", "4", "4", "4", "4", "4", "5", "4", "2", "4", "3", "4"];
+	xCol = ["Year", "2000", "2001", "2002", "2002", "2002", "2004", "2006", "2008", "2008", "2008", "2009", "2010", "2010", "2011", "2011", "2011", "2014", "2014", "2014", "2015"],
+	yCol = ["Volcanic explosivity (VEI)", "4", "4", "1", "4", "4", "4", "4", "4", "4", "4", "4", "4", "4", "4", "5", "4", "2", "4", "3", "4"];
 
 
 /**
@@ -28,7 +28,7 @@ var parity = ["pair", "impair"];	// associated to value = num % 2
 
 
 /**
- * Functions
+ * Table functions
  */
 
 function fillDataTable(data) {
@@ -37,79 +37,14 @@ function fillDataTable(data) {
 		$("#data-table tbody").append(tr);
 		
 		$.each(rows, function(j, dat) {
-			var td = $(document.createElement("td")).attr("class", "col-"+j)
+			var td = $(document.createElement("td")).attr("data-col", j)
 													.html(document.createElement("span"));
 			$(td).children().text(dat);
 			$("#data-table #row-"+i).append(td);
 		});
 	});
-}
-
-function generateColSelectHeader(nCols) {
-	var tr = $(document.createElement("tr")).attr("id", "col-select-header");
-	$("#data-table tbody").prepend(tr);
 	
-	for (j=0; j<nCols; j++) {
-		var col = $(document.createElement("th")).data("col", j);
-		
-		switch (j) {
-			case 0:
-				col.attr("id", "select-header-x");
-				var img = $(document.createElement("img")).attr("src", "css/img/time.png")
-														  .attr("id", "time-picker")
-														  .attr("alt", "time.png")
-														  .attr("title", "Select time column (x-axis)")
-														  .data("selected-col", 0);
-				col.html(img);
-				break;
-			case 1:
-				col.attr("id", "select-header-y");
-				var img = $(document.createElement("img")).attr("src", "css/img/data.png")
-														  .attr("id", "data-picker")
-														  .attr("alt", "data.png")
-														  .attr("title", "Select data column (y-axis)")
-														  .data("selected-col", 1);
-				col.html(img);
-				break;
-			default:
-				var span = $(document.createElement("span"));
-				col.html(span);
-				break;
-		}
-		
-		// make droppable
-		col.droppable({
-			activeClass: "ui-state-active",
-			hoverClass: "ui-state-hover",
-			drop: function(event, ui) {
-				ui.draggable.data("selected-col", $(this).data("col"));
-				snapToMiddle(ui.draggable, $(this));
-				$(this).droppable("option", "accept", ui.draggable);
-			},
-			out: function() {
-				$(this).droppable("option", "accept", "*");
-			}
-		});
-		
-		$("#col-select-header").append(col);
-	}
-	
-	var options = {
-		revert: "invalid",
-		containment: "#col-select-header",
-		axis: "x",
-		cursor: "move",
-		create: function(){
-			$(this).data('position', $(this).position());
-		}
-	};
-	$("#time-picker").draggable(options);
-	$("#data-picker").draggable(options);
-}
-
-function snapToMiddle(dragger, target) {
-	var leftMove= target.position().left - dragger.data('position').left + (target.outerWidth(true) - dragger.outerWidth(true)) / 2;
-	dragger.animate({left: leftMove}, {duration: 600, easing: 'easeOutBack'});
+	$("#data-table").data("now-selecting", "0");
 }
 
 function handleFile() {
@@ -124,8 +59,6 @@ function handleFile() {
 		
 		// parse data
 		data = $.csv.toArrays(csvData);
-		var nCols = data[0].length;
-		var nRows = data.length;
 		
 		if(data[0].length < 2) {
 			alert("Error reading " + files[0].name + ": File must contain at least 2 data columns");
@@ -139,45 +72,101 @@ function handleFile() {
 			$("#data-table-overlay").fadeIn();
 			$("#data-table").fadeIn();
 			$("#data-table-submit").fadeIn();
-			
-			// add column selection header to table
-			generateColSelectHeader(nCols);
+			$("#data-table-buttons").fadeIn();
 		}
 	};
 }
 
 function submitDataTable() {
 	// get column selections
-	var selTimeCol = $("#time-picker").data("selected-col");
-	var selDataCol = $("#data-picker").data("selected-col");
+	saveColSelection("x");
+	saveColSelection("y");
 	
-	// get columns
-	timeCol = $("#data-table .col-"+selTimeCol).children().contents();
-	dataCol = $("#data-table .col-"+selDataCol).children().contents();
-	
-	$.each(timeCol, function(i, time) { timeCol[i] = time.data; });
-	$.each(dataCol, function(i, datum) { dataCol[i] = datum.data; });
-	
-	// close and empty #data-table
+	// close #data-table
 	$("#data-table-overlay").fadeOut(300);
 	$("#data-table").fadeOut(300);
 	$("#data-table-submit").fadeOut(300);
+	$("#data-table-buttons").fadeOut(300);
 	
-	drawToCanvas(timeCol, dataCol);
+	// draw results on timeline
+	drawToCanvas(xCol, yCol);
 	
+	// empty #data-table and reset buttons
 	setTimeout(function() {
+		$("#data-table-buttons a.active").removeClass("active");
 		$("#data-table tbody").empty();
 	}, 300);
 }
 
-function generateDataColours(nPoints) {
+function saveColSelection(axis) {	// axis = "x" or "y"
+	var $selected = $("#data-table td.selected-" + axis);	// class = "selected-x" or "selected-y"
+	
+	switch (axis) {
+		case "x":
+			xCol = $selected.children().contents();
+			$.each(xCol, function(i, x) { xCol[i] = x.data; });
+			break;
+		case "y":
+			yCol = $selected.children().contents();
+			$.each(yCol, function(i, y) { yCol[i] = y.data; });
+			break;
+		default:
+			console.log("Invalid parameter: saveColSelection() must receive either 'x' or 'y'");
+			return false;
+			break;
+	}
+}
+
+function toggleTableSelection(nowSelecting) {	// argument values: "x", "y", "0"
+	// set nowSelecting to new selector
+	$("#data-table").data("now-selecting", nowSelecting);
+	
+	if (nowSelecting == "x" || nowSelecting == "y") {
+		$("#data-table td").off("click");		// remove previous table cell bindings
+		
+		var $currentButton = $("#data-table-buttons a#" + nowSelecting + "-picker");
+		
+		if ($currentButton.hasClass("active")) {	// if button was already active
+			$currentButton.removeClass("active");	// remove active class from button
+		} else {													// if button wasn't already active
+			$("#data-table-buttons .active").removeClass("active");	// remove active highlight from previous column picker button
+			$currentButton.addClass("active");						// then add active class to current button
+			
+			// bind clicks on table cells
+			$("#data-table td").on("click", function(event) {
+				// if first row selected, select whole column
+				if ($(this).parent().attr("id") == "row-0") {
+					console.log("Selecting column");
+					$select = $("#data-table td[data-col='" + $(this).attr("data-col") + "']");
+				} else {
+					$select = $(this);
+				}
+				
+				// if it's just a random cell, select only that cell
+				if ($(this).hasClass("selected-" + nowSelecting)) {
+					$select.removeClass("selected-" + nowSelecting);
+				} else {
+					$select.removeClass("selected-x").removeClass("selected-y");
+					$select.addClass("selected-" + nowSelecting);
+				}
+			});
+		}
+	}
+}
+
+
+/**
+ * Canvas functions
+ */
+
+function generateColours(nPoints) {
 	// check if cfg colours are valid hex values
 	var regex = new RegExp(/^#[0-9A-F]{6}$/i);
 	if (regex.test(timelineStartColour.slice(1,7))) {	// if check fails, substitute default (red)
 		console.log("Invalid value in canvas.cfg.js: timelineStartColor = " + timelineStartColour);
 		timelineStartColour = "#FF0000";
 	}
-	if (regex.test(timelineEndColour.slice(1,7))) {	// if check fails, substitute default (blue)
+	if (regex.test(timelineEndColour.slice(1,7))) {		// if check fails, substitute default (blue)
 		console.log("Invalid value in canvas.cfg.js: timelineEndColor = " + timelineEndColour);
 		timelineEndColour = "#0000FF";
 	}
@@ -200,9 +189,9 @@ function generateDataColours(nPoints) {
 	
 	for (i=0; i<nPoints; i++) {
 		// calculate intermediate colour values
-		colours[0] = ((end.r - start.r)/(nPoints - 1))*i + start.r;
-		colours[1] = ((end.g - start.g)/(nPoints - 1))*i + start.g;
-		colours[2] = ((end.b - start.b)/(nPoints - 1))*i + start.b;
+		colours[0] = Math.floor(((end.r - start.r)/(nPoints - 1))*i + start.r);
+		colours[1] = Math.floor(((end.g - start.g)/(nPoints - 1))*i + start.g);
+		colours[2] = Math.floor(((end.b - start.b)/(nPoints - 1))*i + start.b);
 	
 		// add to rgbStrings array
 		rgbaStrings[i] = "rgba(" + colours[0] + "," + colours[1] + "," + colours[2] + "," + timelineOpacity + ")";
@@ -211,24 +200,24 @@ function generateDataColours(nPoints) {
 	return rgbaStrings;
 }
 
-function drawToCanvas(timeCol, dataCol) {
+function drawToCanvas(xCol, yCol) {
 	// clear canvas before redrawing
 	context.clearRect(-timelinePadding, topY - timelinePadding, canvas.width, canvas.height);
 	
 	// TODO: Determine time axis type (years, days, timestamps, ...)
 	
 	// determine x and y axis periods
-	var timeMinMax = getMinMax(timeCol.slice(1, timeCol.length));
-	var dataMinMax = getMinMax(dataCol.slice(1, dataCol.length));
+	var xMinMax = getMinMax(xCol.slice(1, xCol.length));
+	var yMinMax = getMinMax(yCol.slice(1, yCol.length));
 	
-	var xPeriod = Math.floor(rightX/(timeMinMax[1] - timeMinMax[0] + 2));
-	var yPeriod = Math.floor(-midY/(dataMinMax[1] - dataMinMax[0] + 2));
+	var xPeriod = Math.floor(rightX/(xMinMax[1] - xMinMax[0] + 2));
+	var yPeriod = Math.floor(-midY/(yMinMax[1] - yMinMax[0] + 2));
 	
 	// trace content
-	traceDataPoints(timeMinMax, xPeriod, dataMinMax, yPeriod);		// data points
-	traceAxes();													// axes
-	traceLabels();													// axis labels and graph title
-	traceAxisNotation(timeMinMax, xPeriod, dataMinMax, yPeriod);	// axis subdivisions
+	traceDataPoints(xMinMax, xPeriod, yMinMax, yPeriod);	// data points
+	traceAxes();											// axes
+	traceLabels();											// axis labels and graph title
+	traceAxisNotation(xMinMax, xPeriod, yMinMax, yPeriod);	// axis subdivisions
 	
 	// TODO: Animate canvas elements (axes slide outwards with progressive axis notches, vertical lines rotate into circle graphs, labels fade in)
 }
@@ -256,8 +245,8 @@ function resizeCanvas() {
 	context.translate(timelinePadding, Math.floor(canvas.height - timelinePadding));
 	
 	// draw on canvas
-	if (timeCol.length >= 2) {
-		drawToCanvas(timeCol, dataCol);
+	if (xCol.length >= 2) {
+		drawToCanvas(xCol, yCol);
 	}
 }
 
@@ -271,19 +260,19 @@ function updateAxisPoints() {
 
 function traceDataPoints(xMinMax, xPeriod, yMinMax, yPeriod) {
 	// generate data colours
-	var dataColours = generateDataColours(dataCol.length);
+	var yColours = generateColours(yCol.length - 1);
 	
 	// trace each data point
-	for (k=0; k<dataCol.length; k++) {
+	for (k=1; k<yCol.length; k++) {
 		// get period multipliers
-		x = timeCol[k] - xMinMax[0];
-		y = dataCol[k] - yMinMax[0];
+		x = xCol[k] - xMinMax[0];
+		y = yCol[k] - yMinMax[0];
 		
 		var path = new Path2D();
 //		path.moveTo(40 + (x+1)*xPeriod, 0);
 //		path.lineTo(40 + (x+1)*xPeriod, -y*yPeriod);
 		path.arc((x+1)*xPeriod, midY, y*yPeriod, 0, Math.PI*2, false);
-		context.fillStyle = dataColours[k];
+		context.fillStyle = yColours[k];
 		context.fill(path);
 	}
 }
@@ -318,8 +307,8 @@ function traceAxes() {
 }
 
 function traceLabels() {
-	var xlabel = timeCol[0];
-	var ylabel = dataCol[0];
+	var xlabel = xCol[0];
+	var ylabel = yCol[0];
 	var title = ylabel + " by " + xlabel + "";
 	
 	// add axis labels
@@ -398,10 +387,22 @@ $(document).ready(function() {
 		var fileInput = document.getElementById("file-upload");
 		fileInput.addEventListener("change", handleFile, false);
 		
-		// listen for data table submit button
+		// bind data table submit button
 		$("#data-table-submit").on("click", function(event) {
 			event.preventDefault();
 			submitDataTable();
+		});
+		
+		// bind data table x-column button
+		$("#data-table-buttons #x-picker").on("click", function(event) {
+			event.preventDefault();
+			toggleTableSelection("x");
+		});
+		
+		// bind data table y-column button
+		$("#data-table-buttons #y-picker").on("click", function(event) {
+			event.preventDefault();
+			toggleTableSelection("y");
 		});
 	}
 	else {
