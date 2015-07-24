@@ -6,6 +6,11 @@ body {
 	color: #2a2a2a;
 }
 
+
+/**
+ * 	General
+ */
+
 a {
 	color: #2a2a2a;
 	font-weight: bold;
@@ -14,6 +19,16 @@ a {
 
 a:hover { text-decoration: underline; }
 nav a { font-weight: 100; }
+
+
+/**
+ * 	Data table
+ */
+
+header, header a {
+	color: #eee;
+	text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+}
 
 
 /**
@@ -64,8 +79,8 @@ a#data-table-submit:hover { color: #9CEB00; }
  */
 
 #timeline {
-	color: #2a2a2a;
-	background-color: #eee;
+	color: #eee;
+	background-color: #222;
 }
 
 #timeline a { color: #fff; }
