@@ -44,7 +44,8 @@ plotData.ylabel = "Population (thousands)";
 $(document).ready(function() {
 	// TODO: Add manual data entry table
 	
-	Visualisr.defaults.color.bg = "#222";
+	//Visualisr.defaults.color.bg = "#222";
+	Visualisr.defaults.color.borderColor = "transparent";
 	Visualisr.defaults.global.fillParent = true;
 	
 	// get canvas and set dimensions
@@ -53,7 +54,6 @@ $(document).ready(function() {
 	
 	if(canvas.getContext) {	// check if browser supports canvas API
 		context = canvas.getContext('2d');
-//		resizeCanvas();
 // 		
 		// // listen for file upload changes
 		// var fileInput = document.getElementById("file-upload");
@@ -84,7 +84,4 @@ $(document).ready(function() {
 			"min-height": "130px"
 		});
 	}
-	
-	// resize canvas on window resize
-	bindWindowResize();
 });
