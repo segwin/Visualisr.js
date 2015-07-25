@@ -5,23 +5,354 @@
  * Description	Open-source CSV-to-graph webapp built using JavaScript and the HTML5 Canvas API. 
  */
 
+// Claim global variable Visualisr as base class
+var Visualisr = function(canvas) {
+	// Model objects
+	this.table = new Visualisr.Table();
+	this.plotData = new Visualisr.PlotData();
+	this.axisPts = new Visualisr.AxisPts();
+	
+	this.canvas = canvas;
+	this.context = canvas.getContext('2d');
+};
+
+// Default appearance options described in the docs. Users can configure these to their <3's desire
+// by calling Visualisr.defaults.something = value
+Visualisr.defaults = {
+	
+	global: {
+		scale: 1,	// scale factor on all canvas elements
+	},
+	
+	color: {
+		bg: "#222",			// canvas background colour
+		axis: "#ccc",		// axis & notation colour
+		title: "#f0f0f0",	// timeline title colour
+		
+		bubblesStart: "#0055FF",	// leftmost colour on plot points gradient (hexadecimal values only)
+		bubblesEnd: "#FF0055",		// rightmost colour on plot points gradient (hexadecimal values only)
+		bubbleOpacity: 0.35,		// plot point opacity (between 0 and 1)
+	},
+	
+	font: {
+		face: "Open Sans",	// global font face
+		scale: 1,			// scale factor on all canvas text
+		
+		axisSize: 11,
+		axisLabelSize: 16,
+		titleSize: 28,
+	},
+	
+	layout: {
+		padding: 40,	// canvas padding
+		axisWidth: 2,	// axis line thickness
+		minPeriodX: 50,	// minimum spacing between x-axis subdivisions
+		minPeriodY: 30,	// minimum spacing between y-axis subdivisions
+	}
+
+};
+
+// Global variables
+Visualisr.global = {
+	
+	pixelRatio: 1,
+	
+	font: {
+		axis: "",
+		axisLabel: "",
+		title: "",
+	},
+	
+};
+
+// Object containing all global utilities (methods and classes)
+Visualisr.helpers = {};
 
 /**
- * Global variables
- */
+ * Method: applyPixelRatio()
+ * Scale pixel-sized elements by 1.5x the device pixel ratio.
+ */ 
+Visualisr.helpers.applyPixelRatio = function() {
+	// Get device pixel ratio and compare to browser's canvas scaling
+	Visualisr.global.pixelRatio = (function () {
+	    var ctx = document.createElement("canvas").getContext("2d"),
+	        dpr = window.devicePixelRatio || 1,
+	        bsr = ctx.webkitBackingStorePixelRatio ||
+	              ctx.mozBackingStorePixelRatio ||
+	              ctx.msBackingStorePixelRatio ||
+	              ctx.oBackingStorePixelRatio ||
+	              ctx.backingStorePixelRatio || 1;
+	
+	    return dpr / bsr;
+	})();
+	
+	// Apply scaling if necessary
+	if (pixelRatio != 1) {
+		var ratio = pixelRatio/1.5;
+		
+		Visualisr.defaults.layout.padding *= ratio;
+		Visualisr.defaults.layout.axisWidth *= ratio;
+		Visualisr.defaults.layout.minPeriodX *= ratio;
+		Visualisr.defaults.layout.minPeriodY *= ratio;
+		
+		Visualisr.defaults.font.scale *= ratio;
+		
+		Visualisr.makeFontStrings();
+	}
+};
 
-var table = new Visualisr.Table();
-var plotData = new Visualisr.PlotData();
-var axisPts = new Visualisr.AxisPts();
-var canvas, context;
+/**
+ * Method: makeFontStrings()
+ * Build font strings from values in Visualisr.defaults.font. Uses the global font face for
+ * all text and the global scale factor to adjust font size.
+ */
+Visualisr.helpers.makeFontStrings = function() {
+	var face = Visualisr.defaults.font.face;
+	
+	// axis notation font
+	var axisSize = Visualisr.defaults.font.scale * Visualisr.defaults.font.axisSize;
+	Visualisr.global.font.axis = axisSize + "px " + face;
+	
+	// axis label font
+	var axisLabelSize = Visualisr.defaults.font.scale * Visualisr.defaults.font.axisLabelSize;
+	Visualisr.global.font.axisLabel = "bold " + axisLabelSize + "px " + face;
+	
+	// graph title font
+	var titleSize = Visualisr.defaults.font.scale * Visualisr.defaults.font.titleSize;
+	Visualisr.global.font.title = "bold " + titleSize + "px " + face;
+};
+
+/**
+ * Class: Pair(x,y)
+ * Simple class representing a pair of values. Used to store data pairs and point coordinates.
+ * 
+ * Constructor parameters:
+ *		- x: number or string
+ *		- y: number or string
+ */
+Visualisr.helpers.Pair = function(x, y) {
+	this.x = x;
+	this.y = y;
+};
+
+/**
+ * Class: DataAttr(x,y)
+ * Contains various attributes of a column in the internal data table (min value, max value, the
+ * difference between them, and an estimation of the average distance between adjacent values)
+ */
+Visualisr.DataAttr = function() {
+	this.min = 0;
+	this.max = 0;
+	this.delta = 0;
+	this.avgDistance = 0;
+};
+
+/**
+ * Class: Table()
+ * One of the three model classes. It contains an internal table of data pairs and is used to
+ * store and handle user data input.
+ */
+Visualisr.Table = function() {
+	this.data = Array();	// internal table
+};
+
+/**
+ * Method: Table.generateTable()
+ * Loops through internal data table and renders it on page so the user can view it, make changes,
+ * and select the data to show on the graph.
+ */
+Visualisr.Table.prototype.generateTable = function() {
+	// empty previous table
+	var tbody = document.createElement("tbody");
+	$("#data-table").html(tbody);
+	
+	// fill table cell by cell
+	for (i=0; i < this.data.length; i++) {
+		var tr = $(document.createElement("tr")).attr("id", "row-"+i);
+		$("#data-table tbody").append(tr);
+		
+		for (j=0; j < this.data[i].length; j++) {
+			var td = $(document.createElement("td")).attr("contenteditable", "true")
+													.attr("data-col", j);
+			
+			if (j==0) {
+				$(td).addClass("selected-x");
+			} else if (j==1) {
+				$(td).addClass("selected-y");
+			}
+			
+			$(td).text(this.data[i][j]);
+			$("#data-table tbody #row-" + i).append(td);
+		}
+	}
+};
 
 
 /**
- * Constants
+ * PlotData class
  */
 
-// calculated at runtime
-var PIXEL_RATIO;
+Visualisr.PlotData = function() {
+	// Plot descriptions
+	this.title;
+	this.xlabel;
+	this.ylabel;
+	
+	// Plot points
+	this.pts;			// array of all accepted (i.e. numeric) plot points
+	this.ambig;	// ambiguity values for each saved point
+	this.size;
+	
+	// Other attributes
+	this.xAttr;
+	this.yAttr;
+	
+	this.init();
+};
+
+Visualisr.PlotData.prototype.init = function() {
+	// Plot descriptions
+	this.title = "";
+	this.xlabel = "";
+	this.ylabel = "";
+	
+	// Plot points
+	this.pts = Array( /* Pair point */ );			// array of all accepted (i.e. numeric) plot points
+	this.ambig = Array( /* float ambigValue */ );	// ambiguity values for each saved point
+	this.size = 0;
+	
+	// Other attributes
+	this.xAttr = new Visualisr.DataAttr();
+	this.yAttr = new Visualisr.DataAttr();
+};
+
+// push([*] x, [*] y): Interprets a pair of values of any type and adds it to appropriate part of PlotTable
+Visualisr.PlotData.prototype.push = function(pair) {
+	x = processNumString(pair.x);
+	y = processNumString(pair.y);
+	
+	var typeStr = $.type(x) + " " + $.type(y);	// e.g. "string number"
+	
+	switch (typeStr) {
+		case "number number":
+			var pair = new Visualisr.Pair(x,y);
+			this.pts.push(pair);
+			this.ambig.push(0);
+			this.size++;
+			break;
+		case "string string":
+			this.xlabel += x;
+			this.ylabel += y;
+			break;
+		case "string number":
+		case "number string":
+		default:
+			console.log("Unable to interpret pair: (" + x + ", " + y + ")");
+			var pair = new Visualisr.Pair(x,y);
+			this.pts.push(pair);
+			this.ambig.push(1);
+			this.size++;
+			break;
+	}
+};
+
+// SetPoint(int i, int x, int y): Set value of point at this.pts[index] 
+Visualisr.PlotData.prototype.setPoint = function(index, point) {
+	this.pts[index] = point;
+};
+
+Visualisr.PlotData.prototype.getAttr = function() {
+	var xMin = this.pts[0].x;	// assign initial values to min, max
+	var xMax = this.pts[0].x;
+	
+	var yMin = this.pts[0].y;
+	var yMax = this.pts[0].y;
+	
+	$(this.pts).each(function(i, pair) {
+		xMin = Math.min(xMin, pair.x);	// compare current pair to saved values, ovewrite if lesser
+		xMax = Math.max(xMax, pair.x);	//											  ... if greater
+		
+		yMin = Math.min(yMin, pair.y);
+		yMax = Math.max(yMax, pair.y);
+	});
+	
+	// // get avg distance between points
+	// var avgDistance = 0;
+	// var nDiff = col.length - 1;
+	// $(col).each(function() {
+		// // TODO: Calculate avg distance
+	// });
+	
+	this.xAttr.min = xMin;	// assign values
+	this.xAttr.max = xMax;
+	
+	this.yAttr.min = yMin;
+	this.yAttr.max = yMax;
+	
+	this.xAttr.delta = xMax - xMin;	// calculate delta
+	this.yAttr.delta = yMax - yMin;
+};
+
+
+/**
+ * Graph dimensions class
+ */
+
+Visualisr.AxisPts = function() {
+	// vertical axis
+	this.maxY;
+	this.midY;
+	
+	// horizontal axis
+	this.maxX;
+	this.midX;
+};
+
+Visualisr.AxisPts.prototype.update = function() {
+	this.maxY = Math.floor(-canvas.height + 2*PADDING_OUTER);
+	this.midY = Math.floor(axisPts.maxY/2);
+	
+	this.maxX = Math.floor(canvas.width - 2*PADDING_OUTER);
+	this.midX = Math.floor(axisPts.maxX/2);
+};
+
+
+/**
+ * Graph class
+ */
+
+Visualisr.Graph = function() {
+	// dimensions
+	this.width;
+	this.height;
+	this.padding = PADDING_OUTER;
+};
+
+Visualisr.Graph.prototype.setWidth = function(w) {
+	
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 /**
@@ -32,9 +363,9 @@ var PIXEL_RATIO;
 xCol = ["2000", "2001", "2002", "2002", "2002", "2004", "2006", "2008", "2008", "2008", "2009", "2010", "2010", "2011", "2011", "2011", "2014", "2014", "2014", "2015"],
 yCol = ["4", "4", "1", "4", "4", "4", "4", "4", "4", "4", "4", "4", "4", "4", "5", "4", "2", "4", "3", "4"];
 
-plotData.title = "Volcano eruptions by VEI";
-plotData.xlabel = "Year";
-plotData.ylabel = "Volcanic explosivity index (VEI)";
+title = "Volcano eruptions by VEI";
+xlabel = "Year";
+ylabel = "Volcanic explosivity index (VEI)";
 
 /* Volcano deaths sample (medium)
 var xCol = ["1586", "1630", "1631", "1783", "1792", "1815", "1822", "1877", "1883", "1886", "1894", "1897", "1902", "1902", "1902", "1902", "1911", "1919", "1930", "1951", "1953", "1963", "1968", "1980", "1982", "1985", "1991", "1991", "1993", "1997", "2002", "2010", "2011", "2014"];
@@ -54,10 +385,10 @@ plotData.xlabel = "Year";
 plotData.ylabel = "Population (thousands)";
 */
 
-for (i=0; i<xCol.length; i++) {
-	var pair = new Visualisr.Pair(xCol[i], yCol[i]);
-	plotData.push(pair);
-}
+// for (i=0; i<xCol.length; i++) {
+	// var pair = new Visualisr.helpers.Pair(xCol[i], yCol[i]);
+	// plotData.push(pair);
+// }
 
 
 /**
@@ -462,68 +793,3 @@ function traceAxisNotation(xAttr, yAttr) {
 		context.fillText(yAttr.min + j, -FONT_SIZE_GLOBAL, yNeg + 5);
 	}
 }
-
-
-/**
- * Runtime
- */
-
-$(document).ready(function() {
-	// TODO: Add manual data entry table
-	
-	// calculate PIXEL_RATIO
-	PIXEL_RATIO = (function () {
-	    var ctx = document.createElement("canvas").getContext("2d"),
-	        dpr = window.devicePixelRatio || 1,
-	        bsr = ctx.webkitBackingStorePixelRatio ||
-	              ctx.mozBackingStorePixelRatio ||
-	              ctx.msBackingStorePixelRatio ||
-	              ctx.oBackingStorePixelRatio ||
-	              ctx.backingStorePixelRatio || 1;
-	
-	    return dpr / bsr;
-	})();
-	
-	// update canvas.cfg.js sizes
-	updateCfgSizes(PIXEL_RATIO);
-	
-	// get canvas and set dimensions
-	canvas = document.getElementById('timeline');
-	
-	if(canvas.getContext) {	// check if browser supports canvas API
-		context = canvas.getContext('2d');
-		resizeCanvas();
-		
-		// listen for file upload changes
-		var fileInput = document.getElementById("file-upload");
-		fileInput.addEventListener("change", handleFile, false);
-		
-		// bind data table submit button
-		$("#data-table-submit").on("click", function(event) {
-			event.preventDefault();
-			submitDataTable();
-		});
-		
-		// bind data table x-column button
-		$("#data-table-buttons #x-picker").on("click", function(event) {
-			event.preventDefault();
-			toggleTableSelection("x");
-		});
-		
-		// bind data table y-column button
-		$("#data-table-buttons #y-picker").on("click", function(event) {
-			event.preventDefault();
-			toggleTableSelection("y");
-		});
-	}
-	else {
-		// TODO: fallback code
-		$("#timeline").css({
-			"width": "100%",
-			"min-height": "130px"
-		});
-	}
-	
-	// resize canvas on window resize
-	bindWindowResize();
-});
