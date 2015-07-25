@@ -2,7 +2,7 @@
  * File			js/visualisr.js
  * Author		Eric Seguin
  * Last mod		24 July 2015
- * Description	Main app file with global functions and runtime scripts 
+ * Description	Open-source CSV-to-graph webapp built using JavaScript and the HTML5 Canvas API. 
  */
 
 
