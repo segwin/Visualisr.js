@@ -10,9 +10,9 @@
  * Global variables
  */
 
-var table = new vjs.Table();
-var plotData = new vjs.PlotData();
-var axisPts = new vjs.AxisPts();
+var table = new Visualisr.Table();
+var plotData = new Visualisr.PlotData();
+var axisPts = new Visualisr.AxisPts();
 var canvas, context;
 
 
@@ -55,7 +55,7 @@ plotData.ylabel = "Population (thousands)";
 */
 
 for (i=0; i<xCol.length; i++) {
-	var pair = new vjs.Pair(xCol[i], yCol[i]);
+	var pair = new Visualisr.Pair(xCol[i], yCol[i]);
 	plotData.push(pair);
 }
 
@@ -127,7 +127,7 @@ function handleFile() {
 			form.reset();
 		} else {
 			// render data in #data-table
-			generateTable(table.data);
+			table.generateTable();
 			$("#data-table-overlay").fadeIn();
 			$("#data-table").fadeIn();
 			$("#data-table-submit").fadeIn();
@@ -149,7 +149,7 @@ function submitDataTable() {
 		
 		// store selected cells
 		for (i=0; i < xSel.length; i++) {
-			var pair = new vjs.Pair(xSel[i], ySel[i]);
+			var pair = new Visualisr.Pair(xSel[i], ySel[i]);
 			plotData.push(pair);
 		}
 	}

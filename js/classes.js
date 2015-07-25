@@ -5,19 +5,17 @@
  * Description	Namespace and classes for visualisr.js
  */
 
-
-/**
- * Global namespace
- */
-
-var vjs = vjs || {};
+// Claim global variable Visualisr as namespace
+var Visualisr = function() {
+	
+};
 
 
 /**
  * Pair class
  */
 
-vjs.Pair = function(x, y) {
+Visualisr.Pair = function(x, y) {
 	this.x = x;
 	this.y = y;
 };
@@ -27,31 +25,23 @@ vjs.Pair = function(x, y) {
  * Table class
  */
 
-vjs.Table = function() {
+Visualisr.Table = function() {
 	this.data = Array();	// internal table
 };
 
-vjs.Table.Row = function() {
-	// <tr> element
-	this.el = document.createElement("tr");
-	this.el.
-	
-	// dynamic attributes
-	this.id;
-};
-
-vjs.Table.prototype.generateTable = function() {
+Visualisr.Table.prototype.generateTable = function() {
 	// empty previous table
 	var tbody = document.createElement("tbody");
 	$("#data-table").html(tbody);
 	
 	// fill table cell by cell
-	for (i=0; i<data.length; i++) {
+	for (i=0; i < this.data.length; i++) {
 		var tr = $(document.createElement("tr")).attr("id", "row-"+i);
-		$(TABLE_TBODY).append(tr);
+		$("#data-table tbody").append(tr);
 		
-		for (j=0; j<data[i].length; j++) {
-			var td = $(document.createElement("td")).attr("data-col", j);
+		for (j=0; j < this.data[i].length; j++) {
+			var td = $(document.createElement("td")).attr("contenteditable", "true")
+													.attr("data-col", j);
 			
 			if (j==0) {
 				$(td).addClass("selected-x");
@@ -59,13 +49,13 @@ vjs.Table.prototype.generateTable = function() {
 				$(td).addClass("selected-y");
 			}
 			
-			$(td).text(data[i][j]);
-			$(TABLE_TBODY + " #row-" + i).append(td);
+			$(td).text(this.data[i][j]);
+			$("#data-table tbody #row-" + i).append(td);
 		}
 	}
 };
 
-vjs.Table.prototype.updateCell = function() {
+Visualisr.Table.prototype.updateCell = function() {
 	// TODO
 };
 
@@ -74,7 +64,7 @@ vjs.Table.prototype.updateCell = function() {
  * Data attributes class
  */
 
-vjs.DataAttr = function() {
+Visualisr.DataAttr = function() {
 	this.min = 0;
 	this.max = 0;
 	this.delta = 0;
@@ -86,7 +76,7 @@ vjs.DataAttr = function() {
  * PlotData class
  */
 
-vjs.PlotData = function() {
+Visualisr.PlotData = function() {
 	// Plot descriptions
 	this.title;
 	this.xlabel;
@@ -104,7 +94,7 @@ vjs.PlotData = function() {
 	this.init();
 };
 
-vjs.PlotData.prototype.init = function() {
+Visualisr.PlotData.prototype.init = function() {
 	// Plot descriptions
 	this.title = "";
 	this.xlabel = "";
@@ -116,12 +106,12 @@ vjs.PlotData.prototype.init = function() {
 	this.size = 0;
 	
 	// Other attributes
-	this.xAttr = new vjs.DataAttr();
-	this.yAttr = new vjs.DataAttr();
+	this.xAttr = new Visualisr.DataAttr();
+	this.yAttr = new Visualisr.DataAttr();
 };
 
 // push([*] x, [*] y): Interprets a pair of values of any type and adds it to appropriate part of PlotTable
-vjs.PlotData.prototype.push = function(pair) {
+Visualisr.PlotData.prototype.push = function(pair) {
 	x = processNumString(pair.x);
 	y = processNumString(pair.y);
 	
@@ -129,7 +119,7 @@ vjs.PlotData.prototype.push = function(pair) {
 	
 	switch (typeStr) {
 		case "number number":
-			var pair = new vjs.Pair(x,y);
+			var pair = new Visualisr.Pair(x,y);
 			this.pts.push(pair);
 			this.ambig.push(0);
 			this.size++;
@@ -142,7 +132,7 @@ vjs.PlotData.prototype.push = function(pair) {
 		case "number string":
 		default:
 			console.log("Unable to interpret pair: (" + x + ", " + y + ")");
-			var pair = new vjs.Pair(x,y);
+			var pair = new Visualisr.Pair(x,y);
 			this.pts.push(pair);
 			this.ambig.push(1);
 			this.size++;
@@ -151,11 +141,11 @@ vjs.PlotData.prototype.push = function(pair) {
 };
 
 // SetPoint(int i, int x, int y): Set value of point at this.pts[index] 
-vjs.PlotData.prototype.setPoint = function(index, point) {
+Visualisr.PlotData.prototype.setPoint = function(index, point) {
 	this.pts[index] = point;
 };
 
-vjs.PlotData.prototype.getAttr = function() {
+Visualisr.PlotData.prototype.getAttr = function() {
 	var xMin = this.pts[0].x;	// assign initial values to min, max
 	var xMax = this.pts[0].x;
 	
@@ -192,7 +182,7 @@ vjs.PlotData.prototype.getAttr = function() {
  * Graph dimensions class
  */
 
-vjs.AxisPts = function() {
+Visualisr.AxisPts = function() {
 	// vertical axis
 	this.maxY;
 	this.midY;
@@ -202,7 +192,7 @@ vjs.AxisPts = function() {
 	this.midX;
 };
 
-vjs.AxisPts.prototype.update = function() {
+Visualisr.AxisPts.prototype.update = function() {
 	this.maxY = Math.floor(-canvas.height + 2*PADDING_OUTER);
 	this.midY = Math.floor(axisPts.maxY/2);
 	
@@ -215,13 +205,13 @@ vjs.AxisPts.prototype.update = function() {
  * Graph class
  */
 
-vjs.Graph = function() {
+Visualisr.Graph = function() {
 	// dimensions
 	this.width;
 	this.height;
 	this.padding = PADDING_OUTER;
 };
 
-vjs.Graph.prototype.setWidth = function(w) {
+Visualisr.Graph.prototype.setWidth = function(w) {
 	
 };
