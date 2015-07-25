@@ -31,14 +31,24 @@ vjs.Table = function() {
 	this.data = Array();	// internal table
 };
 
+vjs.Table.Row = function() {
+	// <tr> element
+	this.el = document.createElement("tr");
+	this.el.
+	
+	// dynamic attributes
+	this.id;
+};
+
 vjs.Table.prototype.generateTable = function() {
 	// empty previous table
-	$("#data-table tbody").empty(tr);
+	var tbody = document.createElement("tbody");
+	$("#data-table").html(tbody);
 	
 	// fill table cell by cell
 	for (i=0; i<data.length; i++) {
 		var tr = $(document.createElement("tr")).attr("id", "row-"+i);
-		$("#data-table tbody").append(tr);
+		$(TABLE_TBODY).append(tr);
 		
 		for (j=0; j<data[i].length; j++) {
 			var td = $(document.createElement("td")).attr("data-col", j);
@@ -50,7 +60,7 @@ vjs.Table.prototype.generateTable = function() {
 			}
 			
 			$(td).text(data[i][j]);
-			$("#data-table #row-" + i).append(td);
+			$(TABLE_TBODY + " #row-" + i).append(td);
 		}
 	}
 };

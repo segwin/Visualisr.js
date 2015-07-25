@@ -136,10 +136,6 @@ function handleFile() {
 	};
 }
 
-function generateTable(data) {
-
-}
-
 function submitDataTable() {
 	var xSel = $("#data-table td.selected-x").contents();
 	var ySel = $("#data-table td.selected-y").contents();
