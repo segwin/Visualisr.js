@@ -1,8 +1,8 @@
 /**
- * File			js/cfg/canvas.cfg.js
+ * File			js/cfg/Graph.cfg.js
  * Author		Eric Seguin
- * Last mod		23 July 2015
- * Description	Configuration values for timeline style
+ * Last mod		24 July 2015
+ * Description	Configuration values for Graph class
  */
 
 /**
@@ -22,7 +22,7 @@ var OPACITY_GRAPH = 0.35;			// plot point opacity (between 0 and 1)
  * Spacing & dimensions
  */
 
-var PADDING_CANVAS = 40;	// canvas padding
+var PADDING_OUTER = 40;	// canvas padding
 
 var LINE_WIDTH_AXIS = 2;	// axis line thickness
 
