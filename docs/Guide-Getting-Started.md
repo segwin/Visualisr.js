@@ -8,10 +8,13 @@
   2. **[Initialising a graph](#initialising-a-graph)**
   3. **[Visualising data](#visualising-data)**
 2. **[Making changes](#making-changes)**
-  1. **[Adding/removing data](#addingremoving-data)**
-  2. **[Changing the title/axis labels](#changing-the-titleaxis-labels)**
-  3. **[Clearing the graph](#clearing-the-graph)**
+  1. **[Adding data](#adding-data)**
+  2. **[Removing data](#removing-data)**
+  3. **[Changing the title](#changing-the-title)**
+  4. **[Changing the axis labels](#changing-the-axis-labels)**
+  5. **[Clearing the graph](#clearing-the-graph)**
 3. **[Other goodies](#other-goodies)**
+  1. **[Customising your graph](#customising-your-graph)**
 
 ## Setting up a graph
 
@@ -126,4 +129,23 @@ TODO
 
 ## Other goodies
 
-TODO
+### Customising your graph
+
+Visualisr.js exposes a number of settings for users to play with. To configure one of these options, add the following line of code before applying `graph.visualise(data, title)`.
+
+```js
+Visualisr.defaults.CATEGORY.OPTION = "New option value";
+```
+
+For example, to set the graph background colour to black instead of the default off-white, we would do this:
+
+```js
+// (after initialising the graph like we did in the first section)
+
+Visualisr.defaults.color.bg = "#000";	// set the background color option to black
+graph.visualise(data);					// visualise the data
+```
+
+And there you have it, a graph with a black background! Note that if you wanted to apply this particular change, you'd probably want to change the color of all text elements (e.g. `Visualisr.defaults.color.title`) to a lighter colour so they stay readable.
+
+For a complete list of all Visualisr.js options as well as a description of what they do, please see the [Options reference](https://github.com/segwin/Visualisr.js/blob/docs/Options.md).
