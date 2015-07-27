@@ -7,11 +7,16 @@
 
 (function() {
 	var root = this;
+	var mainObj;
 	
 	// Claim global variable Visualisr as base class
 	Visualisr = function(canvas) {
-		this.canvas = canvas;
-		this.context = canvas.getContext('2d');
+		// Give global access to this object
+		mainObj = this;
+		
+		// Get canvas
+		this.context = context;
+		this.canvas = context.canvas;
 		
 		// Model objects
 		this.table = new Visualisr.Table();
@@ -51,6 +56,7 @@
 			// TODO
 		},
 		
+		// TODO: Extra top padding depending on whether or not title is used
 		/**
 		 * Method: this.drawPoints()
 		 * Draws all valid points in this.plotData onto graph
@@ -86,7 +92,7 @@
 		
 		/**
 		 * Method: this.drawAxes()
-		 * Draws all valid points in this.plotData onto graph
+		 * Draws axes onto graph
 		 */
 		drawAxes: function() {
 			var maxX = this.graph.axisPts.maxX;
@@ -114,13 +120,36 @@
 			axisY.lineTo(5,		maxY + 5);
 			
 			// set line style
-			context.strokeStyle = COLOR_AXIS;
-			context.lineWidth = LINE_WIDTH_AXIS;
+			context.strokeStyle = defaults.color.axis;
+			context.lineWidth = defaults.layout.axisWidth;
 			context.lineCap = "round";
+			
+			// Add drop shadow
+			context.shadowColor = "rgba(0,0,0,0.1)";
+			context.shadowBlur = 3;
 			
 			// trace axes
 			context.stroke(axisX);
 			context.stroke(axisY);
+		},
+		
+		/**
+		 * Method: this.drawLabels()
+		 * Draws axis labels onto graph
+		 */
+		drawLabels: function() {
+			var xlabel = this.plotData.xlabel;
+			var ylabel = this.plotData.ylabel;
+			
+			// add axis labels
+			context.font = global.font.axisLabel;
+			context.fillStyle = defaults.color.axis;
+			
+			context.textAlign = "right";
+			context.fillText(xlabel, this.graph.axisPts.maxX, this.graph.axisPts.midY - 15);
+			
+			context.textAlign = "left";
+			context.fillText(ylabel, 15, this.graph.axisPts.maxY + defaults.font.axisLabelSize);
 		},
 		
 		/**
@@ -324,6 +353,7 @@
 	};
 	
 	// Table class methods
+	// TODO: Add manual data entry table
 	Table.prototype = {
 		
 		/**
@@ -904,18 +934,6 @@
 	}
 	
 	function traceLabels() {
-		var xlabel = plotData.xlabel;
-		var ylabel = plotData.ylabel;
-		
-		// add axis labels
-		context.font = FONT_STR_AXIS_LABELS;
-		context.fillStyle = COLOR_AXIS;
-		
-		context.textAlign = "right";
-		context.fillText(xlabel, axisPts.maxX, axisPts.midY - 15);
-		
-		context.textAlign = "left";
-		context.fillText(ylabel, 15, axisPts.maxY + FONT_SIZE_GLOBAL);
 	}
 	
 	function traceTitle() {

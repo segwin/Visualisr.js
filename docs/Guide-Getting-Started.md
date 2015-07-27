@@ -36,8 +36,12 @@ To add a graph to a `<canvas>` element, you'll need to create a Visualisr instan
 ```
 
 ```js
-var canvas = document.getElementById("example-graph");  // Get the canvas element
-var graph = new Visualisr(canvas);                      // and create a Visualisr object on it
+// Get the canvas context
+var canvas = document.getElementById("example-graph");
+var context = canvas.getContext('2d');
+
+// Create the Visualisr object
+var graph = new Visualisr(canvas);
 ```
 
 ### Visualising data
