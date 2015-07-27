@@ -1,12 +1,34 @@
-# Configuration
+# Options
 
-## Changing a setting
+This page lists all the different configuration options accessible by default in Visualisr.js. It lists the default and possible values for each option as well as a brief description of its purpose and effect. 
 
-Visualisr.js exposes a number of settings for users to play with. To change 
+### Table of Contents
+- **[Global](#global)**
+  - **[Visualisr.defaults.global._scaleAll_](#visualisrdefaultsglobalscaleall)**
+  - **[Visualisr.defaults.global._fillParent_](#visualisrdefaultsglobalfillparent)**
+- **[Color](#color)**
+	- **[Visualisr.defaults.color._bg_](#visualisrdefaultscolorbg)**
+	- **[Visualisr.defaults.color._borderColor_](#visualisrdefaultscolorbordercolor)**
+	- **[Visualisr.defaults.color._borderType_](#visualisrdefaultscolorbordertype)**
+	- **[Visualisr.defaults.color._axis_](#visualisrdefaultscoloraxis)**
+	- **[Visualisr.defaults.color._title_](#visualisrdefaultscolortitle)**
+	- **[Visualisr.defaults.color._bubblesStart_](#visualisrdefaultscolorbubblesstart)**
+	- **[Visualisr.defaults.color._bubblesEnd_](#visualisrdefaultscolorbubblesend)**
+	- **[Visualisr.defaults.color._bubblesOpacity_](#visualisrdefaultscolorbubblesopacity)**
+- **[Font](#font)**
+	- **[Visualisr.defaults.font._face_](#visualisrdefaultsfontface)**
+	- **[Visualisr.defaults.font._scaleText_](#visualisrdefaultsfontscaletext)**
+	- **[Visualisr.defaults.font._axisSize_](#visualisrdefaultsfontaxissize)**
+  - **[Visualisr.defaults.font._axisLabelSize_](#visualisrdefaultsfontaxislabelsize)**
+  - **[Visualisr.defaults.font._titleSize_](#visualisrdefaultsfonttitlesize)**
+- **[Layout](#layout)**
+  - **[Visualisr.defaults.layout._padding_](#visualisrdefaultslayoutpadding)**
+  - **[Visualisr.defaults.layout._borderSize_](#visualisrdefaultslayoutbordersize)**
+  - **[Visualisr.defaults.layout._axisWidth_](#visualisrdefaultslayoutaxiswidth)**
+  - **[Visualisr.defaults.layout._minPeriodX_](#visualisrdefaultslayoutminperiodx)**
+  - **[Visualisr.defaults.layout._minPeriodY_](#visualisrdefaultslayoutminperiody)**
 
-## List of available options
-
-### Global
+## Global
 
 ##### Visualisr.defaults.global._scaleAll_
 
@@ -26,7 +48,7 @@ Controls the scaling factor to apply to all graph elements. For example, setting
 If set to `true`, the graph's width and height will be dynamically assigned to fill its entire parent element.
 
 
-### Color
+## Color
 
 ##### Visualisr.defaults.color._bg_
 
@@ -77,7 +99,7 @@ Controls the starting colour for the graph bubbles.
 
 Controls the ending colour for the graph bubbles.
 
-##### Visualisr.defaults.color._bubbleOpacity_
+##### Visualisr.defaults.color._bubblesOpacity_
 
 > **Default:** `0.35` <br>
 > **Possible values:** Any number between 0 and 1
@@ -85,7 +107,7 @@ Controls the ending colour for the graph bubbles.
 Controls the opacity of the graph bubbles.
 
 
-### Font
+## Font
 
 ##### Visualisr.defaults.font._face_
 
@@ -126,7 +148,7 @@ Controls the font size on axis labels.
 Controls the font size on the graph title.
 
 
-### Layout
+## Layout
 
 ##### _Visualisr.defaults.layout.padding_
 
