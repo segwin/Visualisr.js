@@ -1,2 +1,14 @@
-# html5-grapher
-Open-source CSV-to-graph webapp built using JavaScript and the HTML5 Canvas API.
+# Visualisr.js
+Open-source graphing webapp with optional CSV import capabilities. Built using JavaScript and the HTML5 Canvas API.
+
+## Documentation
+
+#### Guides
+
+- [Getting started](https://github.com/segwin/Visualisr.js/blob/docs/Guide-Getting-Started.md)
+
+#### API
+
+- [Options](https://github.com/segwin/Visualisr.js/blob/docs/API-Options.md)
+- [Methods](https://github.com/segwin/Visualisr.js/blob/docs/API-Methods.md)
+- [Classes](https://github.com/segwin/Visualisr.js/blob/docs/API-Classes.md)

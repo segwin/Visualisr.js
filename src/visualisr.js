@@ -36,7 +36,7 @@
 			var cfg = Visualisr.defaults;
 			
 			this.context.canvas.style.backgroundColor = cfg.color.bg;
-			this.context.canvas.style.border = cfg.layout.borderSize + " " + cfg.color.borderType + " " + cfg.color.borderColor;
+			this.context.canvas.style.border = cfg.layout.borderSize + "px " + cfg.color.borderType + " " + cfg.color.borderColor;
 			
 			util.applyPixelRatio();
 			util.makeFontStrings();
@@ -106,7 +106,7 @@
 	Visualisr.defaults = {
 		
 		global: {
-			scale: 1,			// scale factor on all canvas elements
+			scale: 1.0,			// scale factor on all canvas elements
 			fillParent: false,	// if true, resize canvas to fill its parent element
 		},
 		
@@ -121,12 +121,12 @@
 			
 			bubblesStart: "#0055FF",	// leftmost colour on plot points gradient (hexadecimal values only)
 			bubblesEnd: "#FF0055",		// rightmost colour on plot points gradient (hexadecimal values only)
-			bubbleOpacity: 0.35,		// plot point opacity (between 0 and 1)
+			bubblesOpacity: 0.35,		// plot point opacity (between 0 and 1)
 		},
 		
 		font: {
-			face: "Open Sans",	// global font face
-			scale: 1,			// scale factor on all canvas text
+			face: "'Open Sans', sans-serif",	// global font face
+			scale: 1.0,							// scale factor on all canvas text
 			
 			axisSize: 11,
 			axisLabelSize: 16,
@@ -134,12 +134,12 @@
 		},
 		
 		layout: {
-			padding: 40,			// canvas padding
-			borderSize: "5px",		// canvas border size
+			padding: 40,	// canvas padding
+			borderSize: 5,	// canvas border size
 			
-			axisWidth: 2,			// axis line thickness
-			minPeriodX: 50,			// minimum spacing between x-axis subdivisions
-			minPeriodY: 30,			// minimum spacing between y-axis subdivisions
+			axisWidth: 2,	// axis line thickness
+			minPeriodX: 50,	// minimum spacing between x-axis subdivisions
+			minPeriodY: 30,	// minimum spacing between y-axis subdivisions
 		}
 	
 	};
