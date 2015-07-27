@@ -13,8 +13,9 @@
   3. **[Changing the title](#changing-the-title)**
   4. **[Changing the axis labels](#changing-the-axis-labels)**
   5. **[Clearing the graph](#clearing-the-graph)**
-3. **[Other goodies](#other-goodies)**
-  1. **[Customising your graph](#customising-your-graph)**
+3. **[Configuring the graph](#configuring-the-graph)**
+  1. **[Changing an option](#changing-an-option)**
+  2. **[Options reference](#options-reference)**
 
 ## Setting up a graph
 
@@ -127,9 +128,9 @@ graph.changeLabel("y", newLabel);
 TODO
 
 
-## Other goodies
+## Configuring the graph
 
-### Customising your graph
+### Changing an option
 
 Visualisr.js exposes a number of settings for users to play with. To configure one of these options, add the following line of code before applying `graph.visualise(data, title)`.
 
@@ -147,5 +148,7 @@ graph.visualise(data);					// visualise the data
 ```
 
 And there you have it, a graph with a black background! Note that if you wanted to apply this particular change, you'd probably want to change the color of all text elements (e.g. `Visualisr.defaults.color.title`) to a lighter colour so they stay readable.
+
+### Options reference
 
 For a complete list of all Visualisr.js options as well as a description of what they do, please see the [Options reference](https://github.com/segwin/Visualisr.js/blob/docs/Options.md).
