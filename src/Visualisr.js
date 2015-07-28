@@ -6,22 +6,31 @@
  */
 
 (function() {
+	// Get root (window in browser)
 	var root = this;
-	var mainObj;
 	
-	// Claim global variable Visualisr as base class
-	Visualisr = function(canvas) {
-		// Give global access to this object
-		mainObj = this;
-		
-		// Get canvas
-		this.context = context;
-		this.canvas = context.canvas;
-		
+	/**
+	 * Object alises
+	 * Variables prefixed with '__' represent objects (**not** classes) in the Visualisr instance.
+	 * Used from inside one object to refer to another while staying in the Visualisr scope.
+	 * 
+	 * e.g. if:   graph = new Visualisr(context);
+	 * 		then: __table === graph.table
+	 */
+	var __main,
+		__table,
+		__plotData,
+		__graph,
+		__grid;
+	
+	// Use global variable Visualisr as base class
+	var Visualisr = function(context) {
 		// Model objects
-		this.table = new Visualisr.Table();
-		this.plotData = new Visualisr.PlotData();
-		this.graph = new Visualisr.Graph(this.context);
+		__main = this;
+		$table = this.table = new Table();
+		$plotData = this.plotData = new PlotData();
+		$graph = this.graph = new Graph(context);
+		$grid = this.grid = new Grid();
 		
 		// Other properties
 		this.graph.period = new Pair(0,0);
@@ -44,9 +53,6 @@
 			
 			// Optional functions based on config settings
 			if (defaults.global.fillParent) { this.graph.fillParent(); }
-			
-			// Draw graph using current plotData values
-			this.redraw();
 		},
 		
 		/**
@@ -68,8 +74,6 @@
 		 */
 		getPeriod: function() {
 			// Calculate values (+2 to delta to compensate for spacing on the upper and lower axis extremities)
-			this.graph.period.x = Math.ceil(this.graph.axisPts.maxX/(this.plotData.xAttr.delta + 2));
-			this.graph.period.y = Math.ceil(-this.graph.axisPts.midY/(this.plotData.yAttr.delta + 2));
 			
 			// TODO: Put this in drawAxis function
 			// // Adjust if necessary (smaller than min period)
@@ -87,39 +91,103 @@
 		
 		/**
 		 * Method: this.redraw()
-		 * Draws everything in plotData on the canvas.
+		 * Clears the graph and redraws it based on info from __plotData and __grid.
 		 */
 		redraw: function() {
+			console.log("Redrawing");
+			this.graph.updateAxisPts();
+			this.updateGrid();
+			
 			// Check if plotData.title is a non-empty string. If valid, draw it.
-			if (typeof mainObj.plotData.title === "string" && mainObj.plotData.title.length > 0) {
+			if (typeof this.plotData.title === "string" && this.plotData.title.length > 0) {
 				this.draw.title();
 			}
 			
 			// Check if plotData.pts contains points. If so, draw them.
-			if (mainObj.plotData.pts.length > 0) {
+			if (this.plotData.pts.length > 0) {
 				this.draw.points();
 			}
 			
 			// Draw basic graph elements
 			this.draw.axes();
+			this.draw.axisNotation();
 			this.draw.labels();
+		},
+		
+		// TODO: Describe me
+		/**
+		 * Method: this.updateGrid()
+		 * 
+		 */
+		updateGrid: function() {
+			console.log(this.plotData.xAttr);
+			
+			// Get position of first axis subdivision
+			this.grid.first.x = this.graph.axisPts.minX + defaults.layout.periodX;
+			this.grid.first.y = this.graph.axisPts.minY + defaults.layout.periodY;
+			
+			// Get position of last axis subdivision
+			this.grid.last.x = this.graph.axisPts.maxX - defaults.layout.periodX;
+			this.grid.last.y = this.graph.axisPts.midY - defaults.layout.periodY;
+			
+			// Get number of axis subdivisions to display
+			this.grid.count.x = Math.floor(this.grid.last.x / (defaults.layout.periodX));
+			this.grid.count.y = Math.floor(this.grid.last.y / (defaults.layout.periodY));
+			
+			console.log(this.grid.count);
+			
+			// Avoid repeating subdivisions by limiting count to startValue - endValue
+			// TODO: Implement endValue
+			if (this.grid.count.x > (this.plotData.xAttr.max - defaults.graph.startValue.x)) {
+				this.grid.count.x = Math.ceil(this.plotData.xAttr.max - defaults.graph.startValue.x);
+			}
+			
+			if (this.grid.count.y > (this.plotData.yAttr.max - defaults.graph.startValue.y)) {
+				this.grid.count.y = Math.ceil(this.plotData.yAttr.max - defaults.graph.startValue.y);
+			}
+			
+			console.log(this.grid.count);
+			
+			// Get spacing (__grid.spacing != defaults.graph.spacing due to cumulative rounding effects)
+			this.grid.spacing.x = Math.round(this.grid.last.x / this.grid.count.x);
+			this.grid.spacing.y = Math.round(this.grid.last.y / this.grid.count.y);
+			
+			// Get period (i.e. number of data units per axis subdivision)
+			// TODO: Implement automatic minimum (i.e. if lowest value >> 0, use lowest value on axis)
+			if (this.plotData.pts.length > 0) {
+				if (defaults.graph.endValue.x !== 0) { var maxValueX = defaults.graph.endValue.x; }
+				else { var maxValueX = this.plotData.xAttr.max; }
+				
+				if (defaults.graph.endValue.y !== 0) { var maxValueY = defaults.graph.endValue.y; }
+				else { var maxValueY = this.plotData.yAttr.max; }
+				
+				this.grid.period.x = (maxValueX - defaults.graph.startValue.x) / this.grid.count.x;
+				this.grid.period.y = (maxValueY - defaults.graph.startValue.y) / this.grid.count.y;
+			}
 		},
 		
 	};
 	
 	Visualisr.prototype.draw = {
 		
+		// TODO: Describe me
+		/**
+		 * Method: draw.updateGrid()
+		 * 
+		 */
 		title: function() {
+			var context = __main.graph.context;
+			
 			// Get title
 			var title = Array();
-			title[0] = mainObj.plotData.title;
+			title[0] = __main.plotData.title;
 			
-			context.font = global.font.title;
+			context.font = __global.font.title;
 			context.fillStyle = defaults.color.title;
 			context.textAlign = "center";
 			
 			var titleWidth = context.measureText(title[0]).width;
-			var maxWidth = mainObj.graph.canvas.width - 3*defaults.layout.padding;
+			var maxWidth = __main.graph.canvas.width - 3*defaults.layout.padding;
 			
 			if (titleWidth > maxWidth) {
 				// If title is too wide, apply transformations to make it fit
@@ -130,12 +198,12 @@
 				title[0] = "";
 				title[1] = "";
 				
-				for(i = 0; i < nWords; i++) {
+				for (i = 0; i < nWords; i++) {
 					if (i>0) { title[0] += " "; }
 					title[0] += titleWords[i];
 				}
 				
-				for(i = nWords; i < titleWords.length; i++) {
+				for (i = nWords; i < titleWords.length; i++) {
 					if (i>nWords) { title[1] += " "; }
 					title[1] += titleWords[i];
 				}
@@ -152,20 +220,20 @@
 				}
 				
 				// Set title height
-				global.display.titleHeight = 2 * defaults.font.titleSize * Math.sqrt(shrinkFactor);
+				__global.display.titleHeight = 2 * defaults.font.titleSize * Math.sqrt(shrinkFactor);
 			} else {  // If title isn't too wide, draw it without modification
 				// Set title height
-				global.display.titleHeight = defaults.font.titleSize;
+				__global.display.titleHeight = defaults.font.titleSize;
 			}
 				
 			// Update axis points and clear graph
-			mainObj.graph.updateAxisPts();
-			mainObj.graph.clear();
+			__main.graph.updateAxisPts();
+			__main.graph.clear();
 			
 			// Add title
-			var titleHeight = global.display.titleHeight;
-			var x = mainObj.graph.axisPts.midX;
-			var y = mainObj.graph.axisPts.maxY - titleHeight;
+			var titleHeight = __global.display.titleHeight;
+			var x = __main.graph.axisPts.midX;
+			var y = __main.graph.axisPts.maxY - titleHeight;
 			
 			for (i=0; i < title.length; i++) {
 				context.fillText(title[i], x, y + i*0.6*titleHeight);
@@ -174,34 +242,116 @@
 		
 		/**
 		 * Method: draw.points()
-		 * Draws all valid points in mainObj.plotData onto graph
+		 * Draws all valid points in __main.plotData onto graph
 		 */
 		points: function() {
-			// Generate plot colours
-			var colours = util.generateColors(mainObj.plotData.pts.length);
+			var context = __main.graph.context;
+			var plotData = __main.plotData;
 			
-			// Get x and y periods each time drawPoints() is called to make sure they're up to date
-			mainObj.getPeriod();
+			// Generate plot colours
+			var colours = util.generateColors(__main.plotData.pts.length);
 			
 			// Draw each point
-			for (i = 0; i < mainObj.plotData.pts.length; i++) {
+			for (i = 0; i < __main.plotData.pts.length; i++) {
+				var pxPerUnitX = __main.grid.spacing.x / __main.grid.period.x;
+				var pxPerUnitY = __main.grid.spacing.y / __main.grid.period.y;
+				
 				// Get position relative to the minimum (first notch on the axis)
-				x = mainObj.plotData.pts[i].x - (mainObj.plotData.xAttr.min - 1);
-				y = mainObj.plotData.pts[i].y - (mainObj.plotData.yAttr.min - 1);
+				x = __main.plotData.pts[i].x - defaults.graph.startValue.x;
+				x *= pxPerUnitX;
+				y = __main.plotData.pts[i].y - defaults.graph.startValue.y;
+				y *= pxPerUnitY;
 				
-				// Draw point as circle with radius = y value
-				var pt = new Path2D();
-				pt.arc(
-					x * mainObj.graph.period.x,	// x position
-					mainObj.graph.axisPts.midY,	// y position
-					y * mainObj.graph.period.y,	// radius
-					0,							// start angle
-					Math.PI*2,					// end angle
-					false						// go anticlockwise?
-				);
+				var ptZeroY = new Pair(x, y);
 				
-				context.fillStyle = colours[i];
-				context.fill(pt);
+				// Trace bubbles
+				if (defaults.graph.showBubbles) {
+					this.bubble(ptZeroY, colours[i]);
+				}
+			
+				var pt = new Pair(x, __main.graph.axisPts.midY - y);
+				
+				// Trace line graph
+				if (defaults.graph.showLine) {
+					if (i == 0) {
+						var lineGraph = new Path2D();
+						lineGraph.moveTo(pt.x, pt.y);
+					}
+					
+					this.line(i, plotData.pts.length - 1, lineGraph, pt);
+				}
+				
+				// Trace points
+				if (defaults.graph.showPoints) {
+					if (i == 0) {
+						var pointGraph = new Path2D();
+					}
+					
+					this.point(i, plotData.pts.length - 1, pointGraph, pt);
+				}
+			}
+		},
+		
+		bubble: function(pt, colour) {
+			// Draw point as circle with radius = y value
+			var path = new Path2D();
+			path.arc(
+				pt.x,						// x position
+				__main.graph.axisPts.midY,	// y position
+				pt.y,						// radius
+				0,							// start angle
+				2*Math.PI,					// end angle
+				true						// go anticlockwise?
+			);
+			
+			__main.graph.context.fillStyle = colour;
+			__main.graph.context.fill(path);
+		},
+		
+		line: function(index, end, path, pt) {
+			path.lineTo(pt.x, pt.y);
+			
+			if (index == end) {
+				__main.graph.context.save();
+				
+				__main.graph.context.shadowOffsetX = 2;
+				__main.graph.context.shadowOffsetY = 2;
+				__main.graph.context.shadowBlur = 2;
+				__main.graph.context.shadowColor = "rgba(0,0,0,0.2)";
+				
+				__main.graph.context.lineJoin = "round";
+				__main.graph.context.lineWidth = 2;
+				
+				__main.graph.context.strokeStyle = defaults.color.plot;
+				__main.graph.context.stroke(path);
+				
+				__main.graph.context.restore();
+			}
+		},
+		
+		point: function(index, end, path, pt) {
+			path.moveTo(pt.x + 3, pt.y);
+			path.arc(
+				pt.x,		// x position
+				pt.y,		// y position
+				3,			// radius
+				0,			// start angle
+				Math.PI*2,	// end angle
+				false		// go anticlockwise?
+			);
+			
+			if (index == end) {
+				__main.graph.context.save();
+				
+				__main.graph.context.shadowOffsetX = 2;
+				__main.graph.context.shadowOffsetY = 2;
+				__main.graph.context.shadowBlur = 2;
+				__main.graph.context.shadowColor = "rgba(0,0,0,0.2)";
+				
+				__main.graph.context.fillStyle = defaults.color.plot;
+				__main.graph.context.fill(path);
+				
+				__main.graph.context.restore();
 			}
 		},
 		
@@ -210,15 +360,17 @@
 		 * Draws axes onto graph
 		 */
 		axes: function() {
-			var maxX = mainObj.graph.axisPts.maxX;
-			var maxY = mainObj.graph.axisPts.maxY;
-			var midY = mainObj.graph.axisPts.midY;
+			var context = __main.graph.context;
+			
+			var maxX = __main.graph.axisPts.maxX;
+			var maxY = __main.graph.axisPts.maxY;
+			var midY = __main.graph.axisPts.midY;
 			
 			// plot horizontal axis
 			var axisX = new Path2D();
 			
-			axisX.moveTo(-15,		midY);	// axis line
-			axisX.lineTo(maxX,	midY);
+			axisX.moveTo(-15, midY);	// axis line
+			axisX.lineTo(maxX, midY);
 			
 			axisX.moveTo(maxX - 5,	midY - 5);	// axis arrow
 			axisX.lineTo(maxX,		midY);
@@ -235,6 +387,13 @@
 			axisY.lineTo(5,		maxY + 5);
 			
 			// set line style
+			context.save();
+				
+			context.shadowOffsetX = 2;
+			context.shadowOffsetY = 2;
+			context.shadowBlur = 2;
+			context.shadowColor = "rgba(0,0,0,0.2)";
+			
 			context.strokeStyle = defaults.color.axis;
 			context.lineWidth = defaults.layout.axisWidth;
 			context.lineCap = "round";
@@ -242,6 +401,92 @@
 			// trace axes
 			context.stroke(axisX);
 			context.stroke(axisY);
+			
+			// restore previous style
+			context.restore();
+		},
+		
+		
+		axisNotation: function() {
+			// TODO: Fix edge-case where x or y values begin at 0 (set 0 at origin, not separate notch)
+			// TODO: Set max amount of data points (if above threshold, use only every nth data where n = ceil(threshold/nData) )
+			// TODO: Do not mirror y axis; only label positive half UNLESS defaults.graph.negativeValues === true
+			
+			var context = __main.graph.context;
+			var plotData = __main.plotData;
+			
+			context.font = __global.font.axis;
+			context.textAlign = "right";
+			context.strokeStyle = defaults.color.axis;
+			context.fillStyle = defaults.color.axis;
+			
+			// set shadow style
+			context.save();
+			
+			context.shadowOffsetX = 2;
+			context.shadowOffsetY = 2;
+			context.shadowBlur = 2;
+			context.shadowColor = "rgba(0,0,0,0.2)";
+			
+			// Notate x axis
+			for (i=1; i <= __main.grid.count.x; i++) {
+				var notch = new Path2D();
+				
+				// Coordinates
+				var x = i * __main.grid.spacing.x;
+				var y = __main.graph.axisPts.midY + 2*defaults.font.axisSize;
+				
+				// Draw notch
+				notch.moveTo(x, __main.graph.axisPts.midY - 6);
+				notch.lineTo(x, __main.graph.axisPts.midY + 6);
+				context.stroke(notch);
+				
+				// Rotate canvas for numbering (45° counterclockwise)
+				var theta = Math.PI/4;
+				context.rotate(-theta);
+				
+				// Draw number if available
+				if (plotData.pts.length > 0) {
+					var decimals = Math.pow(10, defaults.graph.roundAt.x);
+					var number = Math.round(decimals * i * __main.grid.period.x) / decimals;
+						number += defaults.graph.startValue.x;
+					
+					context.fillText(number, (x - y + 5)*Math.cos(theta), (x + y)*Math.sin(theta));
+				}
+				
+				// Rotate canvas back to 0°
+				context.rotate(theta);
+			}
+			
+			// notate y axis
+			for (j=1; j <= __main.grid.count.y; j++) {
+				var notch = new Path2D();
+				
+				var x = -defaults.font.axisSize;
+				var yPos = __main.graph.axisPts.midY - j*__main.grid.spacing.y;
+				var yNeg = __main.graph.axisPts.midY + j*__main.grid.spacing.y;
+				
+				notch.moveTo(-5, yPos);	// positive values
+				notch.lineTo(5, yPos);
+				notch.moveTo(-5, yNeg);	// negative values
+				notch.lineTo(5, yNeg);
+				context.stroke(notch);
+				
+				// TODO: Add padding to left if numbers are too long (overlaps border)
+				
+				// Draw number if available
+				if (plotData.pts.length > 0) {
+					var decimals = Math.pow(10, defaults.graph.roundAt.x);
+					var number = Math.round(decimals * j * __main.grid.period.y) / decimals;
+						number += defaults.graph.startValue.y;
+									
+					context.fillText(number, x, yPos + 5);
+					context.fillText(number, x, yNeg + 5);
+				}
+			}
+			
+			// restore context state
+			context.restore();
 		},
 		
 		/**
@@ -249,24 +494,26 @@
 		 * Draws axis labels onto graph
 		 */
 		labels: function() {
-			var xlabel = mainObj.plotData.xlabel;
-			var ylabel = mainObj.plotData.ylabel;
+			var context = __main.graph.context;
+			
+			var xlabel = __main.plotData.xlabel;
+			var ylabel = __main.plotData.ylabel;
 			
 			// add axis labels
-			context.font = global.font.axisLabel;
+			context.font = __global.font.axisLabel;
 			context.fillStyle = defaults.color.axis;
 			
 			context.textAlign = "right";
-			context.fillText(xlabel, mainObj.graph.axisPts.maxX, mainObj.graph.axisPts.midY - 15);
+			context.fillText(xlabel, __main.graph.axisPts.maxX, __main.graph.axisPts.midY - 15);
 			
 			context.textAlign = "left";
-			context.fillText(ylabel, 15, mainObj.graph.axisPts.maxY + defaults.font.axisLabelSize);
+			context.fillText(ylabel, 15, __main.graph.axisPts.maxY + defaults.font.axisLabelSize);
 		},
 		
 	};
 	
-	// Default appearance options described in the docs. Users can configure these to their <3's desire
-	// by calling Visualisr.defaults.something = value
+	// Default options (described in the docs). Users can configure these to their <3's desire by
+	// calling Visualisr.defaults.this.option = value
 	var defaults = Visualisr.defaults = {
 		
 		global: {
@@ -274,18 +521,42 @@
 			fillParent: false,		// if true, resize canvas to fill its parent element
 		},
 		
+		graph: {
+			roundAt: {		// determines where to round off units on the graph (10^roundAt)
+				x: 0,
+				y: 0
+			},
+			
+			startValue: {	// determines first value on axis
+				x: 0,
+				y: 0
+			},
+			
+			endValue: {		// TODO: (implement this) determines last value on axis
+				x: 0,
+				y: 0
+			},
+			
+			// Graph types
+			showBubbles: false,
+			showLine: false,
+			showPoints: false,
+		},
+		
 		color: {
-			bg: "#f9f9f9",		// canvas background colour
+			bg: "#f0f0f0",		// canvas background colour
 			
 			borderColor: "#ccc",	// canvas border colour
 			borderType: "solid",	// canvas border type
 			
-			axis: "#afafaf",		// axis & notation colour
-			title: "#999",	// timeline title colour
+			axis: "#000",	// axis & notation colour
+			title: "#000",	// timeline title colour
 			
 			bubblesStart: "#0055FF",	// leftmost colour on plot points gradient (hexadecimal values only)
 			bubblesEnd: "#FF0055",		// rightmost colour on plot points gradient (hexadecimal values only)
 			bubblesOpacity: 0.35,		// plot point opacity (between 0 and 1)
+			
+			plot: "#000",	// plot colour
 		},
 		
 		font: {
@@ -302,14 +573,17 @@
 			borderSize: 5,	// canvas border size
 			
 			axisWidth: 2,	// axis line thickness
-			minPeriodX: 50,	// minimum spacing between x-axis subdivisions
-			minPeriodY: 30,	// minimum spacing between y-axis subdivisions
+			
+			// TODO: Change periodX, periodY to period.x and period.y 
+			//		 && Move to defaults.graph
+			periodX: 50,	// minimum spacing between x-axis subdivisions
+			periodY: 30,	// minimum spacing between y-axis subdivisions
 		}
 	
 	};
 	
 	// Global variables
-	var global = Visualisr.global = {
+	var __global = Visualisr.prototype.global = {
 		
 		display: {
 			titleHeight: 0,
@@ -418,7 +692,7 @@
 	};
 	
 	/**
-	 * Class: DataAttr(x,y)
+	 * Class: DataAttr()
 	 * Contains various attributes of a column in the internal data table (min value, max value, the
 	 * difference between them, and an estimation of the average distance between adjacent values)
 	 */
@@ -426,7 +700,19 @@
 		this.min = 0;
 		this.max = 0;
 		this.delta = 0;
-		this.avgDistance = 0;
+	};
+	
+	/**
+	 * Class: Grid()
+	 * Contains the spacial characteristics of the graph grid (i.e. x and y information on grid size,
+	 * spacing, etc.) based on axis properties (size -> number of subdivs -> grid size)
+	 */
+	var Grid = Visualisr.Grid = function() {
+		this.first = new Pair(0,0);		// Position of first axis subdiv
+		this.last = new Pair(0,0);		// Position of last axis subdiv
+		this.count = new Pair(0,0);		// Number of axis subdivs
+		this.spacing = new Pair(0,0);	// Grid spacing (px)
+		this.period = new Pair(0,0);	// Grid period (units)
 	};
 	
 	/**
@@ -593,16 +879,19 @@
 		},
 		
 		/**
-		 * Method: this.push(pair)
-		 * Interprets a pair of values of any type and adds it to appropriate part of PlotTable
+		 * Method: this.push(array)
+		 * Interprets an x and y pair of any type and stores it in an appropriate part of plotData.
+		 * Non-numeric pairs are also entered into this.pts, but with an ambiguity value of 1 (i.e. they
+		 * won't be displayed on the graph itself)
 		 * 
 		 * Arguments:
-		 * 		- pair: A pair of values of arbitrary type
+		 * 		- x: (number or string) x value
+		 * 		- y: (number or string) y value
 		 */
-		push: function(pair) {
+		push: function(x,y) {
 			// Attempt to interpret strings as numbers
-			x = processNumString(pair.x);
-			y = processNumString(pair.y);
+			x = __main.util.processNumString(x);
+			y = __main.util.processNumString(y);
 			
 			var typeStr = $.type(x) + " " + $.type(y);	// e.g. "string number"
 			
@@ -613,12 +902,6 @@
 					this.ambig.push(0);
 					this.size++;
 					break;
-				case "string string":
-					this.xlabel += x;
-					this.ylabel += y;
-					break;
-				case "string number":
-				case "number string":
 				default:
 					console.log("Unable to interpret pair: (" + x + ", " + y + ")");
 					var pair = new Pair(x,y);
@@ -627,6 +910,22 @@
 					this.size++;
 					break;
 			}
+		},
+		
+		/**
+		 * Method: this.pushPoints(points)
+		 * Add a point or an array of points to the end of the internal pts array
+		 * 
+		 * Arguments:
+		 * 		- point: A pair/an array of pairs of numeric values representing a point on the graph
+		 */
+		pushArray: function(points) {
+			for (i=0; i < points[0].length; i++) {
+				this.push(points[0][i], points[1][i]);
+			}
+			
+			this.sort();
+			this.updateAttr();
 		},
 		
 		/**
@@ -642,25 +941,32 @@
 			this.pts[index] = point;
 		},
 		
-		/**
-		 * Method: this.pushPoints(points)
-		 * Add a point or an array of points to the end of the internal pts array
-		 * 
-		 * Arguments:
-		 * 		- point: A pair/an array of pairs of numeric values representing a point on the graph
-		 */
-		pushPoints: function(points) {
-			for (i=0; i < points.length; i++) {
-				this.pts.push(points[i]);
+		// TODO: Describe
+		sort: function() {
+			function isAmbigZero(element, index, array) { return element === 0; }
+			
+			if (!this.ambig.every(isAmbigZero)) {
+				console.log("Failed to sort points array: ambiguous values");
+			} else {
+				this.pts.sort(this.sortFunctor);
+				console.log("Successfully sorted points array");
 			}
 		},
 		
+		sortFunctor: function(a, b) {
+			if      (a.x < b.x) { return -1; }
+			else if (a.x > b.x) { return 1; }
+			else if (a.y < b.y) { return -1; }
+			else if (a.y > b.y) { return 1; }
+			else                { return 0; }
+		},
+		
 		/**
-		 * Method: this.getAttr()
+		 * Method: this.updateAttr()
 		 * Get two DataAttr() objects representing the attributes of the x and y values in the
 		 * internal pts array
 		 */
-		getAttr: function() {
+		updateAttr: function() {
 			var xMin = xMax = this.pts[0].x;	// assign initial values to min, max
 			var yMin = yMax = this.pts[0].y;
 			
@@ -671,13 +977,6 @@
 				yMin = Math.min(yMin, pair.y);
 				yMax = Math.max(yMax, pair.y);
 			});
-			
-			// // get avg distance between points
-			// var avgDistance = 0;
-			// var nDiff = col.length - 1;
-			// $(col).each(function() {
-				// // TODO: Calculate avg distance
-			// });
 			
 			this.xAttr.min = xMin;	// assign values
 			this.xAttr.max = xMax;
@@ -696,12 +995,13 @@
 	 * frontend portion of the app. It stores the canvas attributes and has methods to control
 	 * the display of the graph on the page.
 	 */
-	Graph = Visualisr.Graph = function(context) {
+	var Graph = Visualisr.Graph = function(context) {
 		// Context
 		this.context = context;
 		this.canvas = context.canvas;
 		
 		// Layout
+		this.grid = new Grid();
 		this.padding = defaults.layout.padding;
 		this.axisPts = {
 			maxX: -1,	// rightmost extremity of x axis
@@ -747,15 +1047,15 @@
 		 */ 
 		applyPixelRatio: function() {
 			// Apply scaling if necessary
-			if (global.display.pixelRatio != 1) {
-				var ratio = global.display.pixelRatio/1.5;
+			if (__global.display.pixelRatio != 1) {
+				var ratio = __global.display.pixelRatio / 1.5;
 				
-				defaults.layout.padding *= ratio;
-				defaults.layout.axisWidth *= ratio;
-				defaults.layout.minPeriodX *= ratio;
-				defaults.layout.minPeriodY *= ratio;
+				defaults.layout.padding /= ratio;
+				defaults.layout.axisWidth /= ratio;
+				defaults.layout.periodX /= ratio;
+				defaults.layout.periodY /= ratio;
 				
-				defaults.font.scaleText *= ratio;
+				defaults.font.scaleText /= ratio;
 			}
 		},
 		
@@ -766,10 +1066,10 @@
 		clear: function() {
 			// Save canvas state, then apply identity matrix
 		    this.context.save();
-		    this.context.setTransform(1, 0, 0, 1, 0, 0);
+		    this.context.setTransform(__global.display.pixelRatio, 0, 0, __global.display.pixelRatio, 0, 0);
 		    
 		    // Clear
-			context.clearRect(0, 0, canvas.offsetWidth, canvas.offsetHeight);
+			this.context.clearRect(0, 0, this.canvas.offsetWidth, this.canvas.offsetHeight);
 			
 			// Restore canvas state
 		    this.context.restore();
@@ -783,7 +1083,7 @@
 		 * 		- graph: Graph() object on which to apply the method (defaults to `this`)
 		 */
 		fillParent: function() {
-			var pixelRatio = global.display.pixelRatio;
+			var pixelRatio = __global.display.pixelRatio;
 		    
 			// Get parent element dimensions
 			w = this.canvas.parentElement.offsetWidth;
@@ -802,7 +1102,7 @@
 			var graph = this;
 			var rtime;
 			var timeout = false;
-			var rwait = 400;
+			var rwait = 100;
 			
 			$(window).on("resize", function() {
 				rtime = new Date();
@@ -818,7 +1118,7 @@
 				} else {
 					timeout = false;
 					graph.fillParent();
-					mainObj.redraw();
+					__main.redraw();
 				}
 			}
 		},
@@ -837,7 +1137,7 @@
 		              ctx.oBackingStorePixelRatio ||
 		              ctx.backingStorePixelRatio || 1;
 		
-		    global.display.pixelRatio = dpr / bsr;
+		    __global.display.pixelRatio = dpr / bsr;
 		},
 		
 		/**
@@ -848,24 +1148,16 @@
 		makeFontStrings: function() {
 			// axis notation font
 			var axisSize = defaults.font.axisSize;
-			global.font.axis = axisSize + "px " + defaults.font.face;
+			__global.font.axis = axisSize + "px " + defaults.font.face;
 			
 			// axis label font
 			var axisLabelSize = defaults.font.axisLabelSize;
-			global.font.axisLabel = "bold " + axisLabelSize + "px " + defaults.font.face;
+			__global.font.axisLabel = "bold " + axisLabelSize + "px " + defaults.font.face;
 			
 			// graph title font
 			var titleSize = defaults.font.titleSize;
-			global.font.title = "bold " + titleSize + "px " + defaults.font.face;
+			__global.font.title = "bold " + titleSize + "px " + defaults.font.face;
 		},
-		
-		/**
-		 * Method: this.onWindowResize(handler, arguments)
-		 * Add event listener to window resize event and bind it to a given handler
-		 * 
-		 * Arguments:
-		 * 		- handler: Function to run on window resize
-		 */
 		
 		/**
 		 * Method: this.scaleFont()
@@ -888,8 +1180,8 @@
 			
 			defaults.layout.axisWidth *= scale;
 			defaults.layout.axisWidth *= scale;
-			defaults.layout.minPeriodX *= scale;
-			defaults.layout.minPeriodY *= scale;
+			defaults.layout.periodX *= scale;
+			defaults.layout.periodY *= scale;
 		},
 		
 		/**
@@ -906,24 +1198,19 @@
 		 */
 		updateAxisPts: function() {
 			var padding = defaults.layout.padding;
+			var pixelRatio = __global.display.pixelRatio;
 			
 			// Reset canvas transforms
-			this.context.setTransform(1, 0, 0, 1, 0, 0);
+			this.context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 			
 			// Get axis points
 			this.axisPts.maxX = Math.floor(this.canvas.offsetWidth - 2*padding);
-			this.axisPts.maxY = Math.floor(-this.canvas.offsetHeight + 2*padding) + 1.5*global.display.titleHeight;
 			this.axisPts.midX = Math.floor(this.axisPts.maxX/2);
+			this.axisPts.minX = Math.floor(padding);
+			
+			this.axisPts.maxY = Math.floor(this.canvas.offsetHeight + 2*padding) - 1.5*__global.display.titleHeight;
 			this.axisPts.midY = Math.floor(this.axisPts.maxY/2);
-			
-			// Set canvas origin to midY, leftX and apply pixel ratio scale
-			var pixelRatio = global.display.pixelRatio;
-			var padding = defaults.layout.padding;
-			
-			this.context.setTransform(
-				pixelRatio, 0,		 0,
-				pixelRatio, padding, Math.floor(this.canvas.height - padding)
-			);
+			this.axisPts.minY = Math.floor(padding);
 		},
 		
 	};
@@ -993,70 +1280,6 @@
 		}
 	}
 	
-	
-	/**
-	 * Canvas functions
-	 */
-	
-	
-	
-	function drawToCanvas() {
-		// clear canvas before redrawing
-		context.clearRect(-PADDING_OUTER, axisPts.maxY - PADDING_OUTER, canvas.width, canvas.height);
-		
-		// TODO: Determine time axis type (years, days, timestamps, ...)
-		
-		// determine x and y axis attributes & periods
-		plotData.getAttr();
-		
-		// trace content
-		traceDataPoints(plotData.xAttr, plotData.yAttr);	// data points
-		traceAxes();										// axes
-		traceLabels();										// axis labels
-		traceTitle();										// graph title
-		traceAxisNotation(plotData.xAttr, plotData.yAttr);	// axis subdivisions
-		
-		// TODO: Animate canvas elements (axes slide outwards with progressive axis notches, vertical lines rotate into circle graphs, labels fade in)
-	}
-	
-	function traceAxisNotation(xAttr, yAttr) {
-		// TODO: Fix edge-case where x or y values begin at 0 (set 0 at origin, not separate notch)
-		// TODO: Set max amount of data points (if above threshold, use only every nth data where n = ceil(threshold/nData) )
-		
-		// notate axes
-		context.font = FONT_STR_AXIS_SUBDIVS;
-		context.fillStyle = COLOR_AXIS;
-		
-		// notate x axis
-		for (i=0; i <= (xAttr.delta); i++) {
-			var notch = new Path2D();
-			var x = (i+1)*xAttr.period;
-			
-			notch.moveTo(x, axisPts.midY - 6);
-			notch.lineTo(x, axisPts.midY + 6);
-			context.stroke(notch);
-			
-			context.textAlign = "center";
-			context.fillText(xAttr.min + i, x, axisPts.midY + 2*FONT_SIZE_AXIS_SUBDIVS);
-		}
-		
-		// notate y axis
-		for (j=0; j <= yAttr.delta; j++) {
-			var notch = new Path2D();
-			var yPos = axisPts.midY - (j+1)*yAttr.period;
-			var yNeg = axisPts.midY + (j+1)*yAttr.period;
-			
-			notch.moveTo(-5, yPos);	// positive values
-			notch.lineTo(5, yPos);
-			notch.moveTo(-5, yNeg);	// negative values
-			notch.lineTo(5, yNeg);
-			context.stroke(notch);
-			
-			context.textAlign = "right";
-			context.fillText(yAttr.min + j, -FONT_SIZE_GLOBAL, yPos + 5);
-			context.fillText(yAttr.min + j, -FONT_SIZE_GLOBAL, yNeg + 5);
-		}
-	}
 
 	this.Visualisr = Visualisr;
 	
