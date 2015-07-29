@@ -78,6 +78,7 @@ $(document).ready(function() {
 	// Graph settings
 	Visualisr.defaults.layout.borderSize = 0;
 	Visualisr.defaults.display.fillParent = true;
+	Visualisr.defaults.color.bg = "#eee";
 	
 	Visualisr.defaults.graph.showBubbles = toggleBubbles.checked;
 	Visualisr.defaults.graph.showPoints =  togglePoints.checked;
