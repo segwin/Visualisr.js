@@ -1,0 +1,147 @@
+html, body {
+	height: 100%;
+}
+
+
+/**
+ * 	General
+ */
+
+* {
+	box-sizing: border-box;
+	border: none;
+	margin: 0;
+	padding: 0;
+	outline: 0;
+}
+
+p { margin: 0.5em 0; }
+
+
+/**
+ * 	Header
+ */
+
+header {
+	position: relative;
+	width: 100%;
+	height: 115px;
+	border-top: 5px solid #ccc;
+}
+
+header span.left,
+header span.right {
+	position: absolute;
+	display: block;
+	top: 20px;
+	z-index: 100;
+}
+
+header span.left {
+	left: 20px;
+}
+
+header span.right {
+	top: 28px;
+	right: 20px;
+	text-align: right;
+}
+
+nav p {
+	display: inline-block;
+	padding-right: 0.8em;
+}
+
+nav p:last-child { padding-right: 0; }
+
+
+/**
+ * 	Data table
+ */
+
+#data-table-container {
+}
+
+#data-table {
+	min-width: 600px;
+	max-height: 85%;
+	overflow: auto;
+	display: block;
+	margin: 70px 120px 0 120px;
+	position: absolute;
+	top: 0;
+	left: 0;
+	z-index: 9999;
+}
+
+#data-table-overlay {
+	display: block;
+	height: 100%;
+	width: 100%;
+	position: fixed;
+	top: 0;
+	left: 0;
+	z-index: 9900;
+}
+
+#data-table td {
+	padding: 0.8em;
+	text-align: center;
+}
+
+#data-table-buttons,
+#data-table-submit {
+	z-index: 10000;
+	position: fixed;
+	display: block;
+}
+
+#data-table-buttons {
+	left: 0;
+	top: 70px;
+	width: 110px;
+	text-align: right;
+}
+#data-table-submit {
+	left: 120px;
+	top: 30px;
+	text-align: left;
+}
+
+#data-table-buttons a,
+#data-table-submit {
+	display: block;
+	height: 40px;
+	padding: 0 5px 0 5px;
+}
+
+
+/**
+ * 	Timeline
+ */
+
+#timeline-wrap {
+	margin: 40px auto;
+	width: calc(100% - 80px);
+	height: calc(100% - 115px - 80px);
+	min-height: 300px;
+}
+
+#timeline {
+	margin: 0 auto;
+	display: block;
+}
+
+#canvas-fallback { padding: 20px; }
+
+
+/**
+ * 	Footer
+ */
+
+footer {
+	position: fixed;
+	right: 1em;
+	bottom: 0.5em;
+}
+
