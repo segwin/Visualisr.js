@@ -82,6 +82,10 @@
 			this.graph.container.appendChild(this.svg);
 			this.svg = document.getElementById("visualisr-graph-" + Visualisr.instanceCounter);
 			
+			// Update axis pts
+			this.graph.updateAxisPts();
+			this.graph.updateGrid();
+			
 			// Draw basic elements
 			this.draw.axes();
 		},
@@ -173,6 +177,9 @@
 		 */
 		redraw: function() {
 			console.log("Redrawing");
+			$(this.svg).empty();
+			
+			this.plotData.updateAttr();
 			this.graph.updateAxisPts();
 			this.graph.updateGrid();
 			
@@ -187,8 +194,9 @@
 			}
 			
 			// Draw basic graph elements
-//			this.draw.axisNotation();
-//			this.draw.labels();
+			this.draw.axes();
+			this.draw.axisNotation();
+			this.draw.labels();
 		},
 		
 	};
@@ -397,7 +405,7 @@
 			var cmd = "";
 			
 			// Set path attributes
-			axes.setAttributeNS(null, "class", "axes");
+			axes.setAttributeNS(null, "class", "visualisr-axes");
 			axes.setAttributeNS(null, "stroke", __settings.color.axis);
 			axes.setAttributeNS(null, "stroke-width", __settings.layout.axisWidth);
 			axes.setAttributeNS(null, "stroke-lineCap", "round");
@@ -432,9 +440,6 @@
 			// TODO: Set max amount of data points (if above threshold, use only every nth data where n = ceil(threshold/nData) )
 			// TODO: Do not mirror y axis; only label positive half UNLESS __settings.graph.negativeValues === true
 			
-			var context = __main.graph.context;
-			var plotData = __main.plotData;
-			
 			var maxX = __main.graph.axisPts.maxX;
 			var minX = __main.graph.axisPts.minX;
 			
@@ -442,78 +447,105 @@
 			var midY = __main.graph.axisPts.midY;
 			var minY = __main.graph.axisPts.minY;
 			
-			context.font = __settings.font.auto.axis;
-			context.textAlign = "right";
-			context.strokeStyle = __settings.color.axis;
-			context.fillStyle = __settings.color.axis;
+			// context.font = __settings.font.auto.axis;
+			// context.textAlign = "right";
+			// context.strokeStyle = __settings.color.axis;
+			// context.fillStyle = __settings.color.axis;
 			
-			// set shadow style
-			context.save();
+			// Create elements
+			var subdivs = document.createElementNS(xmlns, "path");
+			var cmd = "";
 			
-			context.shadowOffsetX = 2;
-			context.shadowOffsetY = 2;
-			context.shadowBlur = 2;
-			context.shadowColor = "rgba(0,0,0,0.2)";
+			// Set subdivs attributes
+			subdivs.setAttributeNS(null, "class", "visualisr-axis-subdivs");
+			subdivs.setAttributeNS(null, "stroke", __settings.color.axis);
+			subdivs.setAttributeNS(null, "stroke-width", __settings.layout.axisWidth/2);
+			subdivs.setAttributeNS(null, "stroke-lineCap", "round");
+			subdivs.setAttributeNS(null, "fill", "none");
+			
+			// Numbering element generator
+			var makeNumberingElement = function() {
+				var numbering = document.createElementNS(xmlns, "text");
+				
+				// Set attributes
+				numbering.setAttributeNS(null, "class", "visualisr-axis-numbering");
+				numbering.setAttributeNS(null, "font-family", __settings.font.face);
+				numbering.setAttributeNS(null, "font-size", __settings.font.axisSize);
+				numbering.setAttributeNS(null, "fill", __settings.color.axis);
+				numbering.setAttributeNS(null, "text-anchor", "end");
+				
+				return numbering;
+			};
 			
 			// Notate x axis
 			for (i=1; i <= __main.graph.grid.count.x; i++) {
-				var notch = new Path2D();
+				var numbering = makeNumberingElement();
 				
 				// Coordinates
-				var x = minX + i * __main.graph.grid.spacing.x;
-				var y = midY + 2*__settings.font.axisSize;
+				var x = minX + i * __main.graph.grid.spacing.x + 0.5*__settings.font.axisSize;
+				var y = midY + 1.5*__settings.font.axisSize;
 				
 				// Draw notch
-				notch.moveTo(x, midY - 6);
-				notch.lineTo(x, midY + 6);
-				context.stroke(notch);
-				
-				// Rotate canvas for numbering (45° counterclockwise)
-				var theta = Math.PI/4;
-				context.rotate(-theta);
+				cmd += " M " + String(x) + " " + String(midY - 6);
+				cmd += " V " + String(midY + 6);
 				
 				// Draw number if available
-				if (plotData.pts.length > 0) {
+				if (__plotData.pts.length > 0) {
+					numbering.setAttributeNS(null, "x", x);
+					numbering.setAttributeNS(null, "y", y);
+					numbering.setAttributeNS(null, "transform", "rotate(-45 " + String(x) + "," + String(y) + ")");
+					
+					// Calculate and add number
 					var decimals = Math.pow(10, __settings.graph.roundAt.x);
 					var number = Math.round(decimals * i * __main.graph.grid.period.x) / decimals;
 						number += __settings.graph.startValue.x;
 					
-					context.fillText(number, (x - y + 5)*Math.cos(theta), (x + y)*Math.sin(theta));
+					// TODO: Find polyfill for .textContent in IE<9
+					numbering.textContent = number;
+					
+					// Add numbering immediately (allows object reuse)
+					__main.svg.appendChild(numbering);
 				}
 				
-				// Rotate canvas back to 0°
-				context.rotate(theta);
 			}
 			
 			// notate y axis
 			for (j=1; j <= __main.graph.grid.count.y; j++) {
-				var notch = new Path2D();
+				var numbering = makeNumberingElement();
 				
 				var x = minX - __settings.font.axisSize;
 				var yPos = midY - j*__main.graph.grid.spacing.y;
 				var yNeg = midY + j*__main.graph.grid.spacing.y;
 				
-				notch.moveTo(minX - 5, yPos);	// positive values
-				notch.lineTo(minX + 5, yPos);
-				notch.moveTo(minX - 5, yNeg);	// negative values
-				notch.lineTo(minX + 5, yNeg);
-				context.stroke(notch);
+				cmd += " M " + String(minX - 5) + " " + String(yPos);	// positive values
+				cmd += " H " + String(minX + 5);
+				// cmd += " M " + String(minX - 5) + " " + String(yNeg);	// negative values
+				// cmd += " H " + String(minX + 5);
 				
 				// TODO: Add padding to left if numbers are too long (overlaps border)
 				
 				// Draw number if available
-				if (plotData.pts.length > 0) {
+				if (__plotData.pts.length > 0) {
+					numbering.setAttributeNS(null, "x", x);
+					numbering.setAttributeNS(null, "y", yPos + __settings.font.axisSize/2.5);
+					// numbering.setAttributeNS(null, "transform", "rotate(-45 " + String(x) + "," + String(yNeg + 5) + ")");
+					
+					// Calculate and add number
 					var decimals = Math.pow(10, __settings.graph.roundAt.x);
 					var number = Math.round(decimals * j * __main.graph.grid.period.y) / decimals;
 						number += __settings.graph.startValue.y;
-									
-					context.fillText(number, x, yPos + 5);
-					context.fillText(number, x, yNeg + 5);
+					
+					// TODO: Find polyfill for .textContent in IE<9
+					numbering.textContent = number;
+					
+					// Add numbering immediately (allows object reuse)
+					__main.svg.appendChild(numbering);
 				}
 			}
 			
-			// restore context state
-			context.restore();
+			subdivs.setAttributeNS(null, "d", cmd);
+			__main.svg.appendChild(subdivs);
+			
 		},
 		
 		/**
@@ -521,20 +553,37 @@
 		 * Draws axis labels onto graph
 		 */
 		labels: function() {
-			var context = __main.graph.context;
+			// Label element generator
+			var makeLabelElement = function(textAnchor) {
+				var label = document.createElementNS(xmlns, "text");
+				
+				// Set xlabel attributes
+				label.setAttributeNS(null, "class", "visualisr-axis-label");
+				label.setAttributeNS(null, "font-family", __settings.font.face);
+				label.setAttributeNS(null, "font-size", __settings.font.axisLabelSize);
+				label.setAttributeNS(null, "fill", __settings.color.axis);
+				label.setAttributeNS(null, "text-anchor", textAnchor);
+				
+				return label;
+			};
 			
-			var xlabel = __main.plotData.xlabel;
-			var ylabel = __main.plotData.ylabel;
+			// x label
+			var xlabel = makeLabelElement("end");
 			
-			// add axis labels
-			context.font = __settings.font.auto.axisLabel;
-			context.fillStyle = __settings.color.axis;
+			xlabel.setAttributeNS(null, "x", __main.graph.axisPts.maxX);
+			xlabel.setAttributeNS(null, "y", __main.graph.axisPts.midY - 15);
 			
-			context.textAlign = "right";
-			context.fillText(xlabel, __main.graph.axisPts.maxX, __main.graph.axisPts.midY - 15);
+			xlabel.textContent = __main.plotData.xlabel;
+			__main.svg.appendChild(xlabel);
 			
-			context.textAlign = "left";
-			context.fillText(ylabel, 15, __main.graph.axisPts.maxY + __settings.font.axisLabelSize);
+			// y label
+			var ylabel = makeLabelElement("start");
+			
+			ylabel.setAttributeNS(null, "x", __main.graph.axisPts.minX + 15);
+			ylabel.setAttributeNS(null, "y", __main.graph.axisPts.minY + 0.75*__settings.font.axisLabelSize);
+			
+			ylabel.textContent = __main.plotData.ylabel;
+			__main.svg.appendChild(ylabel);
 		},
 		
 	};
@@ -1220,15 +1269,14 @@
 		 */
 		updateGrid: function() {
 			// Get spacing between first and last axis subdivisions
-			this.grid.delta.x = this.axisPts.maxX - this.axisPts.minX - 2*__settings.graph.period.x;
-			this.grid.delta.y = this.axisPts.midY - this.axisPts.minY - 2*__settings.graph.period.y;
+			this.grid.delta.x = this.axisPts.maxX - this.axisPts.minX - 1.5*__settings.graph.period.x;
+			this.grid.delta.y = this.axisPts.midY - this.axisPts.minY - 1.5*__settings.graph.period.y;
 			
 			// Get number of axis subdivisions to display
 			this.grid.count.x = Math.floor(this.grid.delta.x / (__settings.graph.period.x));
 			this.grid.count.y = Math.floor(this.grid.delta.y / (__settings.graph.period.y));
 			
 			// Avoid repeating subdivisions by limiting count to startValue - endValue
-			// TODO: Implement endValue
 			if (this.grid.count.x > (__plotData.xAttr.max - __settings.graph.startValue.x)) {
 				this.grid.count.x = Math.ceil(__plotData.xAttr.max - __settings.graph.startValue.x);
 			}
