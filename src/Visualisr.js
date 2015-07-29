@@ -571,7 +571,7 @@
 			context.fillText(xlabel, __main.graph.axisPts.maxX, __main.graph.axisPts.midY - 15);
 			
 			context.textAlign = "left";
-			context.fillText(ylabel, 15, __main.graph.axisPts.minY + __settings.font.axisLabelSize);
+			context.fillText(ylabel, __main.graph.axisPts.minX + 15, __main.graph.axisPts.minY + __settings.font.axisLabelSize);
 		},
 		
 	};
