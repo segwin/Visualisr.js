@@ -629,7 +629,7 @@
 		},
 		
 		font: {
-			face: "'Open Sans', sans-serif",	// global font face
+			face: "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",	// global font face
 			scaleText: 1.0,						// scale factor on all canvas text
 			
 			axisSize: 11,
