@@ -9,6 +9,9 @@
 	// Get root (window in browser)
 	var root = this;
 	
+	// Assign XML namespace to global variable
+	var xmlns = "http://www.w3.org/2000/svg";
+	
 	/**
 	 * Object alises
 	 * Variables prefixed with '__' represent objects (**not** classes) in the Visualisr instance.
@@ -21,12 +24,11 @@
 		__table,
 		__plotData,
 		__graph,
-		__grid,
 		__util,
 		__settings;
 	
 	// Use global variable Visualisr as base class
-	var Visualisr = function(context) {
+	var Visualisr = function(container) {
 		// Clone settings
 		this.cloneSettings();
 		
@@ -34,8 +36,8 @@
 		__main = this;
 		__table = this.table = new Table();
 		__plotData = this.plotData = new PlotData();
-		__graph = this.graph = new Graph(context);
-		__grid = this.grid = new Grid();
+		__graph = this.graph = new Graph(container);
+		__svg = this.svg;
 		
 		// Other properties
 		this.graph.period = new Pair(0,0);
@@ -56,18 +58,25 @@
 			if (typeof Visualisr.instanceCounter !== "undefined") { Visualisr.instanceCounter++; }
 			else { Visualisr.instanceCounter = 1; }
 			
+			// Initialise SVG element
+			this.initSVG();
+			
 			// Optional functions based on config settings
 			if (__settings.display.fillParent) { this.graph.fillParent(); }
 		},
 		
 		/**
-		 * Method: this.addWrapper()
-		 * Adds a wrapper around the graph DOM element for other methods (e.g. the Table.addTable
-		 * method, which adds a table element to that wrapper)
+		 * Method: this.addSVG()
+		 * Adds the SVG element to the graph container.
 		 */
-		addWrapper: function() {
-			var wrapper = document.createElement("div");
-			var canvas = this.graph.canvas;
+		initSVG: function() {
+			this.svg = document.createElementNS(xmlns, "svg");
+			
+			this.svg.setAttributeNS(null, "id", "visualisr-graph-" + Visualisr.instanceCounter);
+			this.svg.setAttributeNS(null, "version", "1.1");
+			this.svg.setAttributeNS(null, "baseProfile", "full");
+			this.svg.setAttributeNS(null, "width", String(this.graph.container.offsetWidth));
+			this.svg.setAttributeNS(null, "height", String(this.graph.container.offsetHeight));
 		},
 		
 		/**
@@ -162,62 +171,18 @@
 			
 			// Check if plotData.title is a non-empty string. If valid, draw it.
 			if (typeof this.plotData.title === "string" && this.plotData.title.length > 0) {
-				this.draw.title();
+//				this.draw.title();
 			}
 			
 			// Check if plotData.pts contains points. If so, draw them.
 			if (this.plotData.pts.length > 0) {
-				this.draw.points();
+//				this.draw.points();
 			}
 			
 			// Draw basic graph elements
 			this.draw.axes();
-			this.draw.axisNotation();
-			this.draw.labels();
-		},
-		
-		// TODO: Describe me
-		/**
-		 * Method: this.updateGrid()
-		 * 
-		 */
-		updateGrid: function() {
-			// Get spacing between first and last axis subdivisions
-			this.grid.delta.x = this.graph.axisPts.maxX - this.graph.axisPts.minX - 2*__settings.graph.period.x;
-			this.grid.delta.y = this.graph.axisPts.midY - this.graph.axisPts.minY - 2*__settings.graph.period.y;
-			
-			// Get number of axis subdivisions to display
-			this.grid.count.x = Math.floor(this.grid.delta.x / (__settings.graph.period.x));
-			this.grid.count.y = Math.floor(this.grid.delta.y / (__settings.graph.period.y));
-			
-			// Avoid repeating subdivisions by limiting count to startValue - endValue
-			// TODO: Implement endValue
-			if (this.grid.count.x > (this.plotData.xAttr.max - __settings.graph.startValue.x)) {
-				this.grid.count.x = Math.ceil(this.plotData.xAttr.max - __settings.graph.startValue.x);
-			}
-			
-			if (this.grid.count.y > (this.plotData.yAttr.max - __settings.graph.startValue.y)) {
-				this.grid.count.y = Math.ceil(this.plotData.yAttr.max - __settings.graph.startValue.y);
-			}
-			
-			console.log(this.grid.count);
-			
-			// Get spacing (__grid.spacing != __settings.graph.spacing due to cumulative rounding effects)
-			this.grid.spacing.x = Math.round(this.grid.delta.x / this.grid.count.x);
-			this.grid.spacing.y = Math.round(this.grid.delta.y / this.grid.count.y);
-			
-			// Get period (i.e. number of data units per axis subdivision)
-			// TODO: Implement automatic minimum (i.e. if lowest value >> 0, use lowest value on axis)
-			if (this.plotData.pts.length > 0) {
-				if (__settings.graph.endValue.x !== 0) { var maxValueX = __settings.graph.endValue.x; }
-				else { var maxValueX = this.plotData.xAttr.max; }
-				
-				if (__settings.graph.endValue.y !== 0) { var maxValueY = __settings.graph.endValue.y; }
-				else { var maxValueY = this.plotData.yAttr.max; }
-				
-				this.grid.period.x = (maxValueX - __settings.graph.startValue.x) / this.grid.count.x;
-				this.grid.period.y = (maxValueY - __settings.graph.startValue.y) / this.grid.count.y;
-			}
+//			this.draw.axisNotation();
+//			this.draw.labels();
 		},
 		
 	};
@@ -307,8 +272,8 @@
 			
 			// Draw each point
 			for (i = 0; i < __main.plotData.pts.length; i++) {
-				var pxPerUnitX = __main.grid.spacing.x / __main.grid.period.x;
-				var pxPerUnitY = __main.grid.spacing.y / __main.grid.period.y;
+				var pxPerUnitX = __main.graph.grid.spacing.x / __main.graph.grid.period.x;
+				var pxPerUnitY = __main.graph.grid.spacing.y / __main.graph.grid.period.y;
 				
 				// Get position relative to the minimum (first notch on the axis)
 				x = __main.plotData.pts[i].x - __settings.graph.startValue.x;
@@ -414,7 +379,7 @@
 		 * Draws axes onto graph
 		 */
 		axes: function() {
-			var context = __main.graph.context;
+			var svg = __main.svg;
 			
 			var maxX = __main.graph.axisPts.maxX;
 			var minX = __main.graph.axisPts.minX;
@@ -493,11 +458,11 @@
 			context.shadowColor = "rgba(0,0,0,0.2)";
 			
 			// Notate x axis
-			for (i=1; i <= __main.grid.count.x; i++) {
+			for (i=1; i <= __main.graph.grid.count.x; i++) {
 				var notch = new Path2D();
 				
 				// Coordinates
-				var x = minX + i * __main.grid.spacing.x;
+				var x = minX + i * __main.graph.grid.spacing.x;
 				var y = midY + 2*__settings.font.axisSize;
 				
 				// Draw notch
@@ -512,7 +477,7 @@
 				// Draw number if available
 				if (plotData.pts.length > 0) {
 					var decimals = Math.pow(10, __settings.graph.roundAt.x);
-					var number = Math.round(decimals * i * __main.grid.period.x) / decimals;
+					var number = Math.round(decimals * i * __main.graph.grid.period.x) / decimals;
 						number += __settings.graph.startValue.x;
 					
 					context.fillText(number, (x - y + 5)*Math.cos(theta), (x + y)*Math.sin(theta));
@@ -523,12 +488,12 @@
 			}
 			
 			// notate y axis
-			for (j=1; j <= __main.grid.count.y; j++) {
+			for (j=1; j <= __main.graph.grid.count.y; j++) {
 				var notch = new Path2D();
 				
 				var x = minX - __settings.font.axisSize;
-				var yPos = midY - j*__main.grid.spacing.y;
-				var yNeg = midY + j*__main.grid.spacing.y;
+				var yPos = midY - j*__main.graph.grid.spacing.y;
+				var yNeg = midY + j*__main.graph.grid.spacing.y;
 				
 				notch.moveTo(minX - 5, yPos);	// positive values
 				notch.lineTo(minX + 5, yPos);
@@ -541,7 +506,7 @@
 				// Draw number if available
 				if (plotData.pts.length > 0) {
 					var decimals = Math.pow(10, __settings.graph.roundAt.x);
-					var number = Math.round(decimals * j * __main.grid.period.y) / decimals;
+					var number = Math.round(decimals * j * __main.graph.grid.period.y) / decimals;
 						number += __settings.graph.startValue.y;
 									
 					context.fillText(number, x, yPos + 5);
@@ -1042,10 +1007,9 @@
 	 * frontend portion of the app. It stores the canvas attributes and has methods to control
 	 * the display of the graph on the page.
 	 */
-	var Graph = Visualisr.Graph = function(context) {
-		// Context
-		this.context = context;
-		this.canvas = context.canvas;
+	var Graph = Visualisr.Graph = function(container) {
+		// Container
+		this.container = container;
 		
 		// Layout
 		this.grid = new Grid();
@@ -1070,15 +1034,15 @@
 		 */
 		init: function() {
 			// Apply correction factor for device pixel ratio
-			this.getPixelRatio();
-			this.applyPixelRatio();
+//			this.getPixelRatio();
+//			this.applyPixelRatio();
 			
 			// Apply __settings.display.scaleAll factor to layout
 			this.scaleLayout();
 			
 			// Set canvas style
-			this.canvas.style.backgroundColor = __settings.color.bg;
-			this.canvas.style.border = __settings.layout.borderSize + "px " + __settings.color.borderType + " " + __settings.color.borderColor;
+			this.container.style.backgroundColor = __settings.color.bg;
+			this.container.style.border = __settings.layout.borderSize + "px " + __settings.color.borderType + " " + __settings.color.borderColor;
 			
 			// Build font strings
 			this.scaleFont();
@@ -1092,35 +1056,37 @@
 		 * Method: this.applyPixelRatio()
 		 * Scale pixel-sized elements by 1.5x the device pixel ratio.
 		 */ 
-		applyPixelRatio: function() {
-			// Apply scaling if necessary
-			if (__settings.display.auto.pixelRatio != 1) {
-				var ratio = __settings.display.auto.pixelRatio / 1.5;
-				
-				__settings.layout.padding /= ratio;
-				__settings.layout.axisWidth /= ratio;
-				__settings.graph.period.x /= ratio;
-				__settings.graph.period.y /= ratio;
-				
-				__settings.font.scaleText /= ratio;
-			}
-		},
+		// TODO: Either remove or modify depending on need (does SVG need a pixel ratio function?)
+		// applyPixelRatio: function() {
+			// // Apply scaling if necessary
+			// if (__settings.display.auto.pixelRatio != 1) {
+				// var ratio = __settings.display.auto.pixelRatio / 1.5;
+// 				
+				// __settings.layout.padding /= ratio;
+				// __settings.layout.axisWidth /= ratio;
+				// __settings.graph.period.x /= ratio;
+				// __settings.graph.period.y /= ratio;
+// 				
+				// __settings.font.scaleText /= ratio;
+			// }
+		// },
 		
 		/**
 		 * Method: this.clear()
 		 * Clears the entire graph. Useful before a complete graph redraw.
 		 */
-		clear: function() {
-			// Save canvas state, then apply identity matrix
-		    this.context.save();
-		    this.context.setTransform(__settings.display.auto.pixelRatio, 0, 0, __settings.display.auto.pixelRatio, 0, 0);
-		    
-		    // Clear
-			this.context.clearRect(0, 0, this.canvas.offsetWidth, this.canvas.offsetHeight);
-			
-			// Restore canvas state
-		    this.context.restore();
-		},
+		// TODO: Either remove or modify depending on need (does SVG need a clear function?)
+		// clear: function() {
+			// // Save canvas state, then apply identity matrix
+		    // this.context.save();
+		    // this.context.setTransform(__settings.display.auto.pixelRatio, 0, 0, __settings.display.auto.pixelRatio, 0, 0);
+// 		    
+		    // // Clear
+			// this.context.clearRect(0, 0, this.canvas.offsetWidth, this.canvas.offsetHeight);
+// 			
+			// // Restore canvas state
+		    // this.context.restore();
+		// },
 		
 		/**
 		 * Method: this.fillParent()
@@ -1133,14 +1099,14 @@
 			var pixelRatio = __settings.display.auto.pixelRatio;
 		    
 			// Get parent element dimensions
-			w = this.canvas.parentElement.offsetWidth;
-			h = this.canvas.parentElement.offsetHeight;
+			w = this.container.parentElement.offsetWidth;
+			h = this.container.parentElement.offsetHeight;
 			
 			// Set new canvas dimensions
-			this.canvas.width = pixelRatio * w;
-			this.canvas.height = pixelRatio * h;
-			this.canvas.style.width = w + "px";
-			this.canvas.style.height = h + "px";
+			this.container.width = w;
+			this.container.height = h;
+			this.container.style.width = w + "px";
+			this.container.style.height = h + "px";
 			
 			// Get new axis points
 			this.updateAxisPts();
@@ -1165,7 +1131,7 @@
 				} else {
 					timeout = false;
 					graph.fillParent();
-					__main.redraw();
+					// TODO: __main.redraw();
 				}
 			}
 		},
@@ -1175,17 +1141,18 @@
 		 * Get the pixel ratio to apply to the canvas element (device pixel ratio over canvas
 		 * pixel ratio)
 		 */ 
-		getPixelRatio: function() {
-		    var ctx = document.createElement("canvas").getContext("2d"),
-		        dpr = window.devicePixelRatio || 1,
-		        bsr = ctx.webkitBackingStorePixelRatio ||
-		              ctx.mozBackingStorePixelRatio ||
-		              ctx.msBackingStorePixelRatio ||
-		              ctx.oBackingStorePixelRatio ||
-		              ctx.backingStorePixelRatio || 1;
-		
-		    __settings.display.auto.pixelRatio = dpr / bsr;
-		},
+		// TODO: Remove or modify for SVG
+		// getPixelRatio: function() {
+		    // var ctx = document.createElement("canvas").getContext("2d"),
+		        // dpr = window.devicePixelRatio || 1,
+		        // bsr = ctx.webkitBackingStorePixelRatio ||
+		              // ctx.mozBackingStorePixelRatio ||
+		              // ctx.msBackingStorePixelRatio ||
+		              // ctx.oBackingStorePixelRatio ||
+		              // ctx.backingStorePixelRatio || 1;
+// 		
+		    // __settings.display.auto.pixelRatio = dpr / bsr;
+		// },
 		
 		/**
 		 * Method: this.makeFontStrings()
@@ -1232,32 +1199,64 @@
 		},
 		
 		/**
-		 * Method: this.setWidth()
-		 * Changes the stored canvas width value and updates the width of the graph on the page.
-		 */
-		setWidth: function(w) {
-			// TODO
-		},
-		
-		/**
 		 * Method: this.updateAxisPts()
 		 * Calculates the important axis points in function of the current canvas dimensions
 		 */
 		updateAxisPts: function() {
 			var padding = __settings.layout.padding;
-			var pixelRatio = __settings.display.auto.pixelRatio;
-			
-			// Reset canvas transforms
-			this.context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 			
 			// Get axis points
-			this.axisPts.maxX = Math.floor(this.canvas.offsetWidth - 2*padding);
+			this.axisPts.maxX = Math.floor(this.container.offsetWidth - 2*padding);
 			this.axisPts.midX = Math.floor(this.axisPts.maxX/2);
 			this.axisPts.minX = Math.floor(padding);
 			
-			this.axisPts.maxY = Math.floor(this.canvas.offsetHeight + 2*padding) - 1.5*__settings.display.auto.titleHeight;
+			this.axisPts.maxY = Math.floor(this.container.offsetHeight + 2*padding) - 1.5*__settings.display.auto.titleHeight;
 			this.axisPts.midY = Math.floor(this.axisPts.maxY/2);
 			this.axisPts.minY = Math.floor(padding);
+		},
+		
+		// TODO: Describe me
+		/**
+		 * Method: this.updateGrid()
+		 * 
+		 */
+		updateGrid: function() {
+			// Get spacing between first and last axis subdivisions
+			this.grid.delta.x = this.graph.axisPts.maxX - this.graph.axisPts.minX - 2*__settings.graph.period.x;
+			this.grid.delta.y = this.graph.axisPts.midY - this.graph.axisPts.minY - 2*__settings.graph.period.y;
+			
+			// Get number of axis subdivisions to display
+			this.grid.count.x = Math.floor(this.grid.delta.x / (__settings.graph.period.x));
+			this.grid.count.y = Math.floor(this.grid.delta.y / (__settings.graph.period.y));
+			
+			// Avoid repeating subdivisions by limiting count to startValue - endValue
+			// TODO: Implement endValue
+			if (this.grid.count.x > (this.plotData.xAttr.max - __settings.graph.startValue.x)) {
+				this.grid.count.x = Math.ceil(this.plotData.xAttr.max - __settings.graph.startValue.x);
+			}
+			
+			if (this.grid.count.y > (this.plotData.yAttr.max - __settings.graph.startValue.y)) {
+				this.grid.count.y = Math.ceil(this.plotData.yAttr.max - __settings.graph.startValue.y);
+			}
+			
+			console.log(this.grid.count);
+			
+			// Get spacing (__grid.spacing != __settings.graph.spacing due to cumulative rounding effects)
+			this.grid.spacing.x = Math.round(this.grid.delta.x / this.grid.count.x);
+			this.grid.spacing.y = Math.round(this.grid.delta.y / this.grid.count.y);
+			
+			// Get period (i.e. number of data units per axis subdivision)
+			// TODO: Implement automatic minimum (i.e. if lowest value >> 0, use lowest value on axis)
+			if (this.plotData.pts.length > 0) {
+				if (__settings.graph.endValue.x !== 0) { var maxValueX = __settings.graph.endValue.x; }
+				else { var maxValueX = this.plotData.xAttr.max; }
+				
+				if (__settings.graph.endValue.y !== 0) { var maxValueY = __settings.graph.endValue.y; }
+				else { var maxValueY = this.plotData.yAttr.max; }
+				
+				this.grid.period.x = (maxValueX - __settings.graph.startValue.x) / this.grid.count.x;
+				this.grid.period.y = (maxValueY - __settings.graph.startValue.y) / this.grid.count.y;
+			}
 		},
 		
 	};
