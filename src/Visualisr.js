@@ -182,21 +182,13 @@
 		 * 
 		 */
 		updateGrid: function() {
-			console.log(this.plotData.xAttr);
-			
-			// Get position of first axis subdivision
-			this.grid.first.x = this.graph.axisPts.minX + __settings.graph.period.x;
-			this.grid.first.y = this.graph.axisPts.minY + __settings.graph.period.y;
-			
-			// Get position of last axis subdivision
-			this.grid.last.x = this.graph.axisPts.maxX - __settings.graph.period.x;
-			this.grid.last.y = this.graph.axisPts.midY - __settings.graph.period.y;
+			// Get spacing between first and last axis subdivisions
+			this.grid.delta.x = this.graph.axisPts.maxX - this.graph.axisPts.minX - 2*__settings.graph.period.x;
+			this.grid.delta.y = this.graph.axisPts.midY - this.graph.axisPts.minY - 2*__settings.graph.period.y;
 			
 			// Get number of axis subdivisions to display
-			this.grid.count.x = Math.floor(this.grid.last.x / (__settings.graph.period.x));
-			this.grid.count.y = Math.floor(this.grid.last.y / (__settings.graph.period.y));
-			
-			console.log(this.grid.count);
+			this.grid.count.x = Math.floor(this.grid.delta.x / (__settings.graph.period.x));
+			this.grid.count.y = Math.floor(this.grid.delta.y / (__settings.graph.period.y));
 			
 			// Avoid repeating subdivisions by limiting count to startValue - endValue
 			// TODO: Implement endValue
@@ -211,8 +203,8 @@
 			console.log(this.grid.count);
 			
 			// Get spacing (__grid.spacing != __settings.graph.spacing due to cumulative rounding effects)
-			this.grid.spacing.x = Math.round(this.grid.last.x / this.grid.count.x);
-			this.grid.spacing.y = Math.round(this.grid.last.y / this.grid.count.y);
+			this.grid.spacing.x = Math.round(this.grid.delta.x / this.grid.count.x);
+			this.grid.spacing.y = Math.round(this.grid.delta.y / this.grid.count.y);
 			
 			// Get period (i.e. number of data units per axis subdivision)
 			// TODO: Implement automatic minimum (i.e. if lowest value >> 0, use lowest value on axis)
@@ -295,7 +287,7 @@
 			// Add title
 			var titleHeight = __settings.display.auto.titleHeight;
 			var x = __main.graph.axisPts.midX;
-			var y = __main.graph.axisPts.maxY - titleHeight;
+			var y = __main.graph.axisPts.minY;
 			
 			for (i=0; i < title.length; i++) {
 				context.fillText(title[i], x, y + i*0.6*titleHeight);
@@ -324,14 +316,14 @@
 				y = __main.plotData.pts[i].y - __settings.graph.startValue.y;
 				y *= pxPerUnitY;
 				
-				var ptZeroY = new Pair(x, y);
+				var ptZeroY = new Pair(__main.graph.axisPts.minX + x, y);
 				
 				// Trace bubbles
 				if (__settings.graph.showBubbles) {
 					this.bubble(ptZeroY, colours[i]);
 				}
 			
-				var pt = new Pair(x, __main.graph.axisPts.midY - y);
+				var pt = new Pair(__main.graph.axisPts.minX + x, __main.graph.axisPts.midY - y);
 				
 				// Trace line graph
 				if (__settings.graph.showLine) {
@@ -425,28 +417,31 @@
 			var context = __main.graph.context;
 			
 			var maxX = __main.graph.axisPts.maxX;
+			var minX = __main.graph.axisPts.minX;
+			
 			var maxY = __main.graph.axisPts.maxY;
 			var midY = __main.graph.axisPts.midY;
+			var minY = __main.graph.axisPts.minY;
 			
 			// plot horizontal axis
 			var axisX = new Path2D();
 			
-			axisX.moveTo(-15, midY);	// axis line
+			axisX.moveTo(minX - 15, midY);	// axis line
 			axisX.lineTo(maxX, midY);
 			
-			axisX.moveTo(maxX - 5,	midY - 5);	// axis arrow
-			axisX.lineTo(maxX,		midY);
-			axisX.lineTo(maxX - 5,	midY + 5);
+			axisX.moveTo(maxX - 5, midY - 5);	// axis arrow
+			axisX.lineTo(maxX, midY);
+			axisX.lineTo(maxX - 5, midY + 5);
 			
 			// plot vertical axis
 			var axisY = new Path2D();
 			
-			axisY.moveTo(0, 0);			// axis line
-			axisY.lineTo(0,	maxY);
+			axisY.moveTo(minX, minY);			// axis line
+			axisY.lineTo(minX, maxY);
 			
-			axisY.moveTo(-5,	maxY + 5);	// axis arrow
-			axisY.lineTo(0,		maxY);
-			axisY.lineTo(5,		maxY + 5);
+			axisY.moveTo(minX - 5, minY + 5);	// axis arrow
+			axisY.lineTo(minX, minY);
+			axisY.lineTo(minX + 5, minY + 5);
 			
 			// set line style
 			context.save();
@@ -477,6 +472,13 @@
 			var context = __main.graph.context;
 			var plotData = __main.plotData;
 			
+			var maxX = __main.graph.axisPts.maxX;
+			var minX = __main.graph.axisPts.minX;
+			
+			var maxY = __main.graph.axisPts.maxY;
+			var midY = __main.graph.axisPts.midY;
+			var minY = __main.graph.axisPts.minY;
+			
 			context.font = __settings.font.auto.axis;
 			context.textAlign = "right";
 			context.strokeStyle = __settings.color.axis;
@@ -495,12 +497,12 @@
 				var notch = new Path2D();
 				
 				// Coordinates
-				var x = i * __main.grid.spacing.x;
-				var y = __main.graph.axisPts.midY + 2*__settings.font.axisSize;
+				var x = minX + i * __main.grid.spacing.x;
+				var y = midY + 2*__settings.font.axisSize;
 				
 				// Draw notch
-				notch.moveTo(x, __main.graph.axisPts.midY - 6);
-				notch.lineTo(x, __main.graph.axisPts.midY + 6);
+				notch.moveTo(x, midY - 6);
+				notch.lineTo(x, midY + 6);
 				context.stroke(notch);
 				
 				// Rotate canvas for numbering (45° counterclockwise)
@@ -524,14 +526,14 @@
 			for (j=1; j <= __main.grid.count.y; j++) {
 				var notch = new Path2D();
 				
-				var x = -__settings.font.axisSize;
-				var yPos = __main.graph.axisPts.midY - j*__main.grid.spacing.y;
-				var yNeg = __main.graph.axisPts.midY + j*__main.grid.spacing.y;
+				var x = minX - __settings.font.axisSize;
+				var yPos = midY - j*__main.grid.spacing.y;
+				var yNeg = midY + j*__main.grid.spacing.y;
 				
-				notch.moveTo(-5, yPos);	// positive values
-				notch.lineTo(5, yPos);
-				notch.moveTo(-5, yNeg);	// negative values
-				notch.lineTo(5, yNeg);
+				notch.moveTo(minX - 5, yPos);	// positive values
+				notch.lineTo(minX + 5, yPos);
+				notch.moveTo(minX - 5, yNeg);	// negative values
+				notch.lineTo(minX + 5, yNeg);
 				context.stroke(notch);
 				
 				// TODO: Add padding to left if numbers are too long (overlaps border)
@@ -754,8 +756,7 @@
 	 * spacing, etc.) based on axis properties (size -> number of subdivs -> grid size)
 	 */
 	var Grid = Visualisr.Grid = function() {
-		this.first = new Pair(0,0);		// Position of first axis subdiv
-		this.last = new Pair(0,0);		// Position of last axis subdiv
+		this.delta = new Pair(0,0);		// Spacing between first and last axis subdivisions (px)
 		this.count = new Pair(0,0);		// Number of axis subdivs
 		this.spacing = new Pair(0,0);	// Grid spacing (px)
 		this.period = new Pair(0,0);	// Grid period (units)
