@@ -21,16 +21,21 @@
 		__table,
 		__plotData,
 		__graph,
-		__grid;
+		__grid,
+		__util,
+		__settings;
 	
 	// Use global variable Visualisr as base class
 	var Visualisr = function(context) {
+		// Clone settings
+		this.cloneSettings();
+		
 		// Model objects
 		__main = this;
-		$table = this.table = new Table();
-		$plotData = this.plotData = new PlotData();
-		$graph = this.graph = new Graph(context);
-		$grid = this.grid = new Grid();
+		__table = this.table = new Table();
+		__plotData = this.plotData = new PlotData();
+		__graph = this.graph = new Graph(context);
+		__grid = this.grid = new Grid();
 		
 		// Other properties
 		this.graph.period = new Pair(0,0);
@@ -44,7 +49,7 @@
 		
 		/**
 		 * Method: this.init()
-		 * Sets initial canvas properties and calls initial methods
+		 * Initialises Visualisr object properties, calls 
 		 */
 		init: function() {
 			// Increment instance counter
@@ -52,7 +57,7 @@
 			else { Visualisr.instanceCounter = 1; }
 			
 			// Optional functions based on config settings
-			if (defaults.global.fillParent) { this.graph.fillParent(); }
+			if (__settings.display.fillParent) { this.graph.fillParent(); }
 		},
 		
 		/**
@@ -62,31 +67,88 @@
 		 */
 		addWrapper: function() {
 			var wrapper = document.createElement("div");
-			// TODO
+			var canvas = this.graph.canvas;
 		},
 		
-		// TODO: Extra top padding depending on whether or not title is used
-		
 		/**
-		 * Method: this.getPeriod()
-		 * Calculates the axis periods in function of the distance between this.plotData points and this.graph
-		 * dimensions. Stores the result in a Pair() object called this.period
+		 * Method: this.cloneSettings()
+		 * Copies all configuration settings from Visualisr.defaults to __main.settings (object local
+		 * scope). Called on object initialisation.
 		 */
-		getPeriod: function() {
-			// Calculate values (+2 to delta to compensate for spacing on the upper and lower axis extremities)
+		cloneSettings: function() {
+			// Clone settings manually. This takes up more lines of code, but we need to do a deep copy
+			// and it's much faster than JQuery.extend().
+			__settings = this.settings = {};
 			
-			// TODO: Put this in drawAxis function
-			// // Adjust if necessary (smaller than min period)
-			// if (xAttr.period < defaults.layout.minPeriodX) {
-				// var xNotchSpacing = defaults.layout.minPeriodX / xAttr.period;
-				// var newWidth = xAttr.period * (xAttr.delta + 2) + 2*PADDING_OUTER;	// resize canvas width to accomodate large content
-			// }
-// 			
-			// if (yAttr.period < defaults.layout.minPeriodY) {
-				// var yMultiplier = defaults.layout.minPeriodY / yAttr.period;
-			// } else {
-				// var yMultiplier = 1;
-			// }
+			this.settings.display = {
+				fillParent: defaults.display.fillParent,
+				scaleAll: defaults.display.scaleAll,
+			};
+			
+			this.settings.graph = {
+				// Graph types
+				showBubbles: defaults.graph.showBubbles,
+				showLine: defaults.graph.showLine,
+				showPoints: defaults.graph.showPoints,
+			};
+			
+				this.settings.graph.roundAt = {
+					x: defaults.graph.roundAt.x,
+					y: defaults.graph.roundAt.x
+				};
+				
+				this.settings.graph.startValue = {
+					x: defaults.graph.startValue.x,
+					y: defaults.graph.startValue.y
+				};
+					
+				this.settings.graph.endValue = {
+					x: defaults.graph.endValue.x,
+					y: defaults.graph.endValue.y
+				};
+				
+				this.settings.graph.period = {
+					x: defaults.graph.period.x,
+					y: defaults.graph.period.y,
+				};
+				
+			this.settings.color = {
+				axis: defaults.color.axis,
+				bg: defaults.color.bg,
+				borderColor: defaults.color.borderColor,
+				borderType: defaults.color.borderType,
+				bubblesStart: defaults.color.bubblesStart,
+				bubblesEnd: defaults.color.bubblesEnd,
+				bubblesOpacity: defaults.color.bubblesOpacity,
+				plot: defaults.color.plot,
+				title: defaults.color.title,
+			};
+				
+			this.settings.font = {
+				axisSize: defaults.font.axisSize,
+				axisLabelSize: defaults.font.axisLabelSize,
+				face: defaults.font.face,
+				scaleText: defaults.font.scaleText,
+				titleSize: defaults.font.titleSize,
+			};
+				
+			this.settings.layout = {
+				axisWidth: defaults.layout.axisWidth,
+				borderSize: defaults.layout.borderSize,
+				padding: defaults.layout.padding,
+			};
+			
+			// Initialise automatic (computed) values
+			this.settings.display.auto = { 
+				titleHeight: 0,
+				pixelRatio: 1,
+			};
+			
+			this.settings.font.auto = {
+				axis: "",
+				axisLabel: "",
+				title: "",
+			};
 		},
 		
 		/**
@@ -123,46 +185,46 @@
 			console.log(this.plotData.xAttr);
 			
 			// Get position of first axis subdivision
-			this.grid.first.x = this.graph.axisPts.minX + defaults.layout.periodX;
-			this.grid.first.y = this.graph.axisPts.minY + defaults.layout.periodY;
+			this.grid.first.x = this.graph.axisPts.minX + __settings.graph.period.x;
+			this.grid.first.y = this.graph.axisPts.minY + __settings.graph.period.y;
 			
 			// Get position of last axis subdivision
-			this.grid.last.x = this.graph.axisPts.maxX - defaults.layout.periodX;
-			this.grid.last.y = this.graph.axisPts.midY - defaults.layout.periodY;
+			this.grid.last.x = this.graph.axisPts.maxX - __settings.graph.period.x;
+			this.grid.last.y = this.graph.axisPts.midY - __settings.graph.period.y;
 			
 			// Get number of axis subdivisions to display
-			this.grid.count.x = Math.floor(this.grid.last.x / (defaults.layout.periodX));
-			this.grid.count.y = Math.floor(this.grid.last.y / (defaults.layout.periodY));
+			this.grid.count.x = Math.floor(this.grid.last.x / (__settings.graph.period.x));
+			this.grid.count.y = Math.floor(this.grid.last.y / (__settings.graph.period.y));
 			
 			console.log(this.grid.count);
 			
 			// Avoid repeating subdivisions by limiting count to startValue - endValue
 			// TODO: Implement endValue
-			if (this.grid.count.x > (this.plotData.xAttr.max - defaults.graph.startValue.x)) {
-				this.grid.count.x = Math.ceil(this.plotData.xAttr.max - defaults.graph.startValue.x);
+			if (this.grid.count.x > (this.plotData.xAttr.max - __settings.graph.startValue.x)) {
+				this.grid.count.x = Math.ceil(this.plotData.xAttr.max - __settings.graph.startValue.x);
 			}
 			
-			if (this.grid.count.y > (this.plotData.yAttr.max - defaults.graph.startValue.y)) {
-				this.grid.count.y = Math.ceil(this.plotData.yAttr.max - defaults.graph.startValue.y);
+			if (this.grid.count.y > (this.plotData.yAttr.max - __settings.graph.startValue.y)) {
+				this.grid.count.y = Math.ceil(this.plotData.yAttr.max - __settings.graph.startValue.y);
 			}
 			
 			console.log(this.grid.count);
 			
-			// Get spacing (__grid.spacing != defaults.graph.spacing due to cumulative rounding effects)
+			// Get spacing (__grid.spacing != __settings.graph.spacing due to cumulative rounding effects)
 			this.grid.spacing.x = Math.round(this.grid.last.x / this.grid.count.x);
 			this.grid.spacing.y = Math.round(this.grid.last.y / this.grid.count.y);
 			
 			// Get period (i.e. number of data units per axis subdivision)
 			// TODO: Implement automatic minimum (i.e. if lowest value >> 0, use lowest value on axis)
 			if (this.plotData.pts.length > 0) {
-				if (defaults.graph.endValue.x !== 0) { var maxValueX = defaults.graph.endValue.x; }
+				if (__settings.graph.endValue.x !== 0) { var maxValueX = __settings.graph.endValue.x; }
 				else { var maxValueX = this.plotData.xAttr.max; }
 				
-				if (defaults.graph.endValue.y !== 0) { var maxValueY = defaults.graph.endValue.y; }
+				if (__settings.graph.endValue.y !== 0) { var maxValueY = __settings.graph.endValue.y; }
 				else { var maxValueY = this.plotData.yAttr.max; }
 				
-				this.grid.period.x = (maxValueX - defaults.graph.startValue.x) / this.grid.count.x;
-				this.grid.period.y = (maxValueY - defaults.graph.startValue.y) / this.grid.count.y;
+				this.grid.period.x = (maxValueX - __settings.graph.startValue.x) / this.grid.count.x;
+				this.grid.period.y = (maxValueY - __settings.graph.startValue.y) / this.grid.count.y;
 			}
 		},
 		
@@ -172,7 +234,7 @@
 		
 		// TODO: Describe me
 		/**
-		 * Method: draw.updateGrid()
+		 * Method: draw.title()
 		 * 
 		 */
 		title: function() {
@@ -182,12 +244,12 @@
 			var title = Array();
 			title[0] = __main.plotData.title;
 			
-			context.font = __global.font.title;
-			context.fillStyle = defaults.color.title;
+			context.font = __settings.font.auto.title;
+			context.fillStyle = __settings.color.title;
 			context.textAlign = "center";
 			
 			var titleWidth = context.measureText(title[0]).width;
-			var maxWidth = __main.graph.canvas.width - 3*defaults.layout.padding;
+			var maxWidth = __main.graph.canvas.width - 3*__settings.layout.padding;
 			
 			if (titleWidth > maxWidth) {
 				// If title is too wide, apply transformations to make it fit
@@ -214,16 +276,16 @@
 				
 				while (titleWidth > maxWidth && shrinkFactor > 0.5) {	// While title is too big
 					shrinkFactor *= 0.75;	// Multiply scaling factor by 0.75 on each iteration
-					context.font = "bold " + defaults.font.titleSize*shrinkFactor + "px " + defaults.font.face;
+					context.font = "bold " + __settings.font.titleSize*shrinkFactor + "px " + __settings.font.face;
 					
 					titleWidth = Math.max(context.measureText(title[0]).width, context.measureText(title[1]).width);
 				}
 				
 				// Set title height
-				__global.display.titleHeight = 2 * defaults.font.titleSize * Math.sqrt(shrinkFactor);
+				__settings.display.auto.titleHeight = 2 * __settings.font.titleSize * Math.sqrt(shrinkFactor);
 			} else {  // If title isn't too wide, draw it without modification
 				// Set title height
-				__global.display.titleHeight = defaults.font.titleSize;
+				__settings.display.auto.titleHeight = __settings.font.titleSize;
 			}
 				
 			// Update axis points and clear graph
@@ -231,7 +293,7 @@
 			__main.graph.clear();
 			
 			// Add title
-			var titleHeight = __global.display.titleHeight;
+			var titleHeight = __settings.display.auto.titleHeight;
 			var x = __main.graph.axisPts.midX;
 			var y = __main.graph.axisPts.maxY - titleHeight;
 			
@@ -257,22 +319,22 @@
 				var pxPerUnitY = __main.grid.spacing.y / __main.grid.period.y;
 				
 				// Get position relative to the minimum (first notch on the axis)
-				x = __main.plotData.pts[i].x - defaults.graph.startValue.x;
+				x = __main.plotData.pts[i].x - __settings.graph.startValue.x;
 				x *= pxPerUnitX;
-				y = __main.plotData.pts[i].y - defaults.graph.startValue.y;
+				y = __main.plotData.pts[i].y - __settings.graph.startValue.y;
 				y *= pxPerUnitY;
 				
 				var ptZeroY = new Pair(x, y);
 				
 				// Trace bubbles
-				if (defaults.graph.showBubbles) {
+				if (__settings.graph.showBubbles) {
 					this.bubble(ptZeroY, colours[i]);
 				}
 			
 				var pt = new Pair(x, __main.graph.axisPts.midY - y);
 				
 				// Trace line graph
-				if (defaults.graph.showLine) {
+				if (__settings.graph.showLine) {
 					if (i == 0) {
 						var lineGraph = new Path2D();
 						lineGraph.moveTo(pt.x, pt.y);
@@ -282,7 +344,7 @@
 				}
 				
 				// Trace points
-				if (defaults.graph.showPoints) {
+				if (__settings.graph.showPoints) {
 					if (i == 0) {
 						var pointGraph = new Path2D();
 					}
@@ -322,7 +384,7 @@
 				__main.graph.context.lineJoin = "round";
 				__main.graph.context.lineWidth = 2;
 				
-				__main.graph.context.strokeStyle = defaults.color.plot;
+				__main.graph.context.strokeStyle = __settings.color.plot;
 				__main.graph.context.stroke(path);
 				
 				__main.graph.context.restore();
@@ -348,7 +410,7 @@
 				__main.graph.context.shadowBlur = 2;
 				__main.graph.context.shadowColor = "rgba(0,0,0,0.2)";
 				
-				__main.graph.context.fillStyle = defaults.color.plot;
+				__main.graph.context.fillStyle = __settings.color.plot;
 				__main.graph.context.fill(path);
 				
 				__main.graph.context.restore();
@@ -394,8 +456,8 @@
 			context.shadowBlur = 2;
 			context.shadowColor = "rgba(0,0,0,0.2)";
 			
-			context.strokeStyle = defaults.color.axis;
-			context.lineWidth = defaults.layout.axisWidth;
+			context.strokeStyle = __settings.color.axis;
+			context.lineWidth = __settings.layout.axisWidth;
 			context.lineCap = "round";
 			
 			// trace axes
@@ -410,15 +472,15 @@
 		axisNotation: function() {
 			// TODO: Fix edge-case where x or y values begin at 0 (set 0 at origin, not separate notch)
 			// TODO: Set max amount of data points (if above threshold, use only every nth data where n = ceil(threshold/nData) )
-			// TODO: Do not mirror y axis; only label positive half UNLESS defaults.graph.negativeValues === true
+			// TODO: Do not mirror y axis; only label positive half UNLESS __settings.graph.negativeValues === true
 			
 			var context = __main.graph.context;
 			var plotData = __main.plotData;
 			
-			context.font = __global.font.axis;
+			context.font = __settings.font.auto.axis;
 			context.textAlign = "right";
-			context.strokeStyle = defaults.color.axis;
-			context.fillStyle = defaults.color.axis;
+			context.strokeStyle = __settings.color.axis;
+			context.fillStyle = __settings.color.axis;
 			
 			// set shadow style
 			context.save();
@@ -434,7 +496,7 @@
 				
 				// Coordinates
 				var x = i * __main.grid.spacing.x;
-				var y = __main.graph.axisPts.midY + 2*defaults.font.axisSize;
+				var y = __main.graph.axisPts.midY + 2*__settings.font.axisSize;
 				
 				// Draw notch
 				notch.moveTo(x, __main.graph.axisPts.midY - 6);
@@ -447,9 +509,9 @@
 				
 				// Draw number if available
 				if (plotData.pts.length > 0) {
-					var decimals = Math.pow(10, defaults.graph.roundAt.x);
+					var decimals = Math.pow(10, __settings.graph.roundAt.x);
 					var number = Math.round(decimals * i * __main.grid.period.x) / decimals;
-						number += defaults.graph.startValue.x;
+						number += __settings.graph.startValue.x;
 					
 					context.fillText(number, (x - y + 5)*Math.cos(theta), (x + y)*Math.sin(theta));
 				}
@@ -462,7 +524,7 @@
 			for (j=1; j <= __main.grid.count.y; j++) {
 				var notch = new Path2D();
 				
-				var x = -defaults.font.axisSize;
+				var x = -__settings.font.axisSize;
 				var yPos = __main.graph.axisPts.midY - j*__main.grid.spacing.y;
 				var yNeg = __main.graph.axisPts.midY + j*__main.grid.spacing.y;
 				
@@ -476,9 +538,9 @@
 				
 				// Draw number if available
 				if (plotData.pts.length > 0) {
-					var decimals = Math.pow(10, defaults.graph.roundAt.x);
+					var decimals = Math.pow(10, __settings.graph.roundAt.x);
 					var number = Math.round(decimals * j * __main.grid.period.y) / decimals;
-						number += defaults.graph.startValue.y;
+						number += __settings.graph.startValue.y;
 									
 					context.fillText(number, x, yPos + 5);
 					context.fillText(number, x, yNeg + 5);
@@ -500,23 +562,23 @@
 			var ylabel = __main.plotData.ylabel;
 			
 			// add axis labels
-			context.font = __global.font.axisLabel;
-			context.fillStyle = defaults.color.axis;
+			context.font = __settings.font.auto.axisLabel;
+			context.fillStyle = __settings.color.axis;
 			
 			context.textAlign = "right";
 			context.fillText(xlabel, __main.graph.axisPts.maxX, __main.graph.axisPts.midY - 15);
 			
 			context.textAlign = "left";
-			context.fillText(ylabel, 15, __main.graph.axisPts.maxY + defaults.font.axisLabelSize);
+			context.fillText(ylabel, 15, __main.graph.axisPts.maxY + __settings.font.axisLabelSize);
 		},
 		
 	};
 	
 	// Default options (described in the docs). Users can configure these to their <3's desire by
-	// calling Visualisr.defaults.this.option = value
+	// calling Visualisr.__settings.this.option = value
 	var defaults = Visualisr.defaults = {
 		
-		global: {
+		display: {
 			scaleAll: 1.0,			// scale factor on all canvas elements
 			fillParent: false,		// if true, resize canvas to fill its parent element
 		},
@@ -535,6 +597,11 @@
 			endValue: {		// TODO: (implement this) determines last value on axis
 				x: 0,
 				y: 0
+			},
+			
+			period: {	// minimum spacing between axis subdivisions
+				x: 50,
+				y: 30,
 			},
 			
 			// Graph types
@@ -573,29 +640,8 @@
 			borderSize: 5,	// canvas border size
 			
 			axisWidth: 2,	// axis line thickness
-			
-			// TODO: Change periodX, periodY to period.x and period.y 
-			//		 && Move to defaults.graph
-			periodX: 50,	// minimum spacing between x-axis subdivisions
-			periodY: 30,	// minimum spacing between y-axis subdivisions
 		}
 	
-	};
-	
-	// Global variables
-	var __global = Visualisr.prototype.global = {
-		
-		display: {
-			titleHeight: 0,
-			pixelRatio: 1,
-		},
-		
-		font: {
-			axis: "",
-			axisLabel: "",
-			title: "",
-		},
-		
 	};
 	
 	// Object containing all global utilities (methods and classes)
@@ -603,8 +649,8 @@
 		
 		// TODO: Description
 		generateColors: function(nPoints) {
-			startStr = defaults.color.bubblesStart;
-			endStr = defaults.color.bubblesEnd;
+			startStr = __settings.color.bubblesStart;
+			endStr = __settings.color.bubblesEnd;
 			
 			// check if cfg colours are valid hex values
 			var regex = new RegExp(/^#[0-9A-F]{6}$/i);
@@ -644,7 +690,7 @@
 					rgbaStrings[i] += colours[0] + ",";					// R
 					rgbaStrings[i] += colours[1] + ",";					// G
 					rgbaStrings[i] += colours[2] + ",";					// B
-					rgbaStrings[i] += defaults.color.bubblesOpacity;	// alpha
+					rgbaStrings[i] += __settings.color.bubblesOpacity;	// alpha
 				rgbaStrings[i] += ")";
 			}
 			
@@ -1002,7 +1048,7 @@
 		
 		// Layout
 		this.grid = new Grid();
-		this.padding = defaults.layout.padding;
+		this.padding = __settings.layout.padding;
 		this.axisPts = {
 			maxX: -1,	// rightmost extremity of x axis
 			maxY: -1,	// upper extremity of y axis
@@ -1026,12 +1072,12 @@
 			this.getPixelRatio();
 			this.applyPixelRatio();
 			
-			// Apply defaults.global.scaleAll factor to layout
+			// Apply __settings.display.scaleAll factor to layout
 			this.scaleLayout();
 			
 			// Set canvas style
-			this.canvas.style.backgroundColor = defaults.color.bg;
-			this.canvas.style.border = defaults.layout.borderSize + "px " + defaults.color.borderType + " " + defaults.color.borderColor;
+			this.canvas.style.backgroundColor = __settings.color.bg;
+			this.canvas.style.border = __settings.layout.borderSize + "px " + __settings.color.borderType + " " + __settings.color.borderColor;
 			
 			// Build font strings
 			this.scaleFont();
@@ -1047,15 +1093,15 @@
 		 */ 
 		applyPixelRatio: function() {
 			// Apply scaling if necessary
-			if (__global.display.pixelRatio != 1) {
-				var ratio = __global.display.pixelRatio / 1.5;
+			if (__settings.display.auto.pixelRatio != 1) {
+				var ratio = __settings.display.auto.pixelRatio / 1.5;
 				
-				defaults.layout.padding /= ratio;
-				defaults.layout.axisWidth /= ratio;
-				defaults.layout.periodX /= ratio;
-				defaults.layout.periodY /= ratio;
+				__settings.layout.padding /= ratio;
+				__settings.layout.axisWidth /= ratio;
+				__settings.graph.period.x /= ratio;
+				__settings.graph.period.y /= ratio;
 				
-				defaults.font.scaleText /= ratio;
+				__settings.font.scaleText /= ratio;
 			}
 		},
 		
@@ -1066,7 +1112,7 @@
 		clear: function() {
 			// Save canvas state, then apply identity matrix
 		    this.context.save();
-		    this.context.setTransform(__global.display.pixelRatio, 0, 0, __global.display.pixelRatio, 0, 0);
+		    this.context.setTransform(__settings.display.auto.pixelRatio, 0, 0, __settings.display.auto.pixelRatio, 0, 0);
 		    
 		    // Clear
 			this.context.clearRect(0, 0, this.canvas.offsetWidth, this.canvas.offsetHeight);
@@ -1077,13 +1123,13 @@
 		
 		/**
 		 * Method: this.fillParent()
-		 * Resize canvas to fill parent element. Called if defaults.global.fillParent == true.
+		 * Resize canvas to fill parent element. Called if __settings.display.fillParent == true.
 		 * 
 		 * Arguments:
 		 * 		- graph: Graph() object on which to apply the method (defaults to `this`)
 		 */
 		fillParent: function() {
-			var pixelRatio = __global.display.pixelRatio;
+			var pixelRatio = __settings.display.auto.pixelRatio;
 		    
 			// Get parent element dimensions
 			w = this.canvas.parentElement.offsetWidth;
@@ -1137,26 +1183,26 @@
 		              ctx.oBackingStorePixelRatio ||
 		              ctx.backingStorePixelRatio || 1;
 		
-		    __global.display.pixelRatio = dpr / bsr;
+		    __settings.display.auto.pixelRatio = dpr / bsr;
 		},
 		
 		/**
 		 * Method: this.makeFontStrings()
-		 * Build font strings from values in defaults.font. Uses the global font face for
+		 * Build font strings from values in __settings.font. Uses the global font face for
 		 * all text and the global scale factor to adjust font size.
 		 */
 		makeFontStrings: function() {
 			// axis notation font
-			var axisSize = defaults.font.axisSize;
-			__global.font.axis = axisSize + "px " + defaults.font.face;
+			var axisSize = __settings.font.axisSize;
+			__settings.font.auto.axis = axisSize + "px " + __settings.font.face;
 			
 			// axis label font
-			var axisLabelSize = defaults.font.axisLabelSize;
-			__global.font.axisLabel = "bold " + axisLabelSize + "px " + defaults.font.face;
+			var axisLabelSize = __settings.font.axisLabelSize;
+			__settings.font.auto.axisLabel = "bold " + axisLabelSize + "px " + __settings.font.face;
 			
 			// graph title font
-			var titleSize = defaults.font.titleSize;
-			__global.font.title = "bold " + titleSize + "px " + defaults.font.face;
+			var titleSize = __settings.font.titleSize;
+			__settings.font.auto.title = "bold " + titleSize + "px " + __settings.font.face;
 		},
 		
 		/**
@@ -1164,24 +1210,24 @@
 		 * Scale pixel-sized elements by 1.5x the device pixel ratio.
 		 */ 
 		scaleFont: function() {
-			var scale = defaults.global.scaleAll * defaults.font.scaleText;
+			var scale = __settings.display.scaleAll * __settings.font.scaleText;
 			
-			defaults.font.axisSize *= scale;
-			defaults.font.axisLabelSize *= scale;
-			defaults.font.titleSize *= scale;
+			__settings.font.axisSize *= scale;
+			__settings.font.axisLabelSize *= scale;
+			__settings.font.titleSize *= scale;
 		},
 		
 		/**
 		 * Method: this.scaleLayout()
-		 * Scale all non-CSS canvas layout properties by the defaults.global.scaleAll factor
+		 * Scale all non-CSS canvas layout properties by the __settings.display.scaleAll factor
 		 */ 
 		scaleLayout: function() {
-			var scale = defaults.global.scaleAll;
+			var scale = __settings.display.scaleAll;
 			
-			defaults.layout.axisWidth *= scale;
-			defaults.layout.axisWidth *= scale;
-			defaults.layout.periodX *= scale;
-			defaults.layout.periodY *= scale;
+			__settings.layout.axisWidth *= scale;
+			__settings.layout.axisWidth *= scale;
+			__settings.graph.period.x *= scale;
+			__settings.graph.period.y *= scale;
 		},
 		
 		/**
@@ -1197,8 +1243,8 @@
 		 * Calculates the important axis points in function of the current canvas dimensions
 		 */
 		updateAxisPts: function() {
-			var padding = defaults.layout.padding;
-			var pixelRatio = __global.display.pixelRatio;
+			var padding = __settings.layout.padding;
+			var pixelRatio = __settings.display.auto.pixelRatio;
 			
 			// Reset canvas transforms
 			this.context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
@@ -1208,7 +1254,7 @@
 			this.axisPts.midX = Math.floor(this.axisPts.maxX/2);
 			this.axisPts.minX = Math.floor(padding);
 			
-			this.axisPts.maxY = Math.floor(this.canvas.offsetHeight + 2*padding) - 1.5*__global.display.titleHeight;
+			this.axisPts.maxY = Math.floor(this.canvas.offsetHeight + 2*padding) - 1.5*__settings.display.auto.titleHeight;
 			this.axisPts.midY = Math.floor(this.axisPts.maxY/2);
 			this.axisPts.minY = Math.floor(padding);
 		},
@@ -1280,7 +1326,6 @@
 		}
 	}
 	
-
 	this.Visualisr = Visualisr;
 	
 }).call(this);
