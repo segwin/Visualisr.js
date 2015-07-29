@@ -57,13 +57,31 @@ var populationCanada = {
 populationCanada.data = [populationCanada.x, populationCanada.y];
 
 $(document).ready(function() {
+	var toggleBubbles = document.getElementById("show-bubbles");
+	$(toggleBubbles).on("change", function() {
+		var toggle = this.checked;
+		togglePlotType("bubbles", toggle);
+	});
+	
+	var togglePoints = document.getElementById("show-points");
+	$(togglePoints).on("change", function() {
+		var toggle = this.checked;
+		togglePlotType("points", toggle);
+	});
+	
+	var toggleLine = document.getElementById("show-line");
+	$(toggleLine).on("change", function() {
+		var toggle = this.checked;
+		togglePlotType("line", toggle);
+	});
+	
 	// Graph settings
 	Visualisr.defaults.layout.borderSize = 0;
 	Visualisr.defaults.display.fillParent = true;
 	
-	Visualisr.defaults.graph.showBubbles = true;
-	Visualisr.defaults.graph.showLine = true;
-	Visualisr.defaults.graph.showPoints =  true;
+	Visualisr.defaults.graph.showBubbles = toggleBubbles.checked;
+	Visualisr.defaults.graph.showPoints =  togglePoints.checked;
+	Visualisr.defaults.graph.showLine = toggleLine.checked;
 	
 	Visualisr.defaults.graph.startValue.x = 1999;
 	Visualisr.defaults.graph.endValue.x = 2015;
@@ -100,24 +118,6 @@ $(document).ready(function() {
 				break;
 		}
 	}
-	
-	var toggleBubbles = document.getElementById("show-bubbles");
-	$(toggleBubbles).on("change", function() {
-		var toggle = this.checked;
-		togglePlotType("bubbles", toggle);
-	});
-	
-	var togglePoints = document.getElementById("show-points");
-	$(togglePoints).on("change", function() {
-		var toggle = this.checked;
-		togglePlotType("points", toggle);
-	});
-	
-	var toggleLine = document.getElementById("show-line");
-	$(toggleLine).on("change", function() {
-		var toggle = this.checked;
-		togglePlotType("line", toggle);
-	});
 	
 	var dataSelect = document.getElementById("select-dataset");
 	$(dataSelect).on("change", function(event) {
