@@ -77,6 +77,13 @@
 			this.svg.setAttributeNS(null, "baseProfile", "full");
 			this.svg.setAttributeNS(null, "width", String(this.graph.container.offsetWidth));
 			this.svg.setAttributeNS(null, "height", String(this.graph.container.offsetHeight));
+			
+			// Add SVG element to page
+			this.graph.container.appendChild(this.svg);
+			this.svg = document.getElementById("visualisr-graph-" + Visualisr.instanceCounter);
+			
+			// Draw basic elements
+			this.draw.axes();
 		},
 		
 		/**
@@ -167,7 +174,7 @@
 		redraw: function() {
 			console.log("Redrawing");
 			this.graph.updateAxisPts();
-			this.updateGrid();
+			this.graph.updateGrid();
 			
 			// Check if plotData.title is a non-empty string. If valid, draw it.
 			if (typeof this.plotData.title === "string" && this.plotData.title.length > 0) {
@@ -180,7 +187,6 @@
 			}
 			
 			// Draw basic graph elements
-			this.draw.axes();
 //			this.draw.axisNotation();
 //			this.draw.labels();
 		},
@@ -379,8 +385,6 @@
 		 * Draws axes onto graph
 		 */
 		axes: function() {
-			var svg = __main.svg;
-			
 			var maxX = __main.graph.axisPts.maxX;
 			var minX = __main.graph.axisPts.minX;
 			
@@ -388,44 +392,38 @@
 			var midY = __main.graph.axisPts.midY;
 			var minY = __main.graph.axisPts.minY;
 			
-			// plot horizontal axis
-			var axisX = new Path2D();
+			// Define axes element
+			var axes = document.createElementNS(xmlns, "path");
+			var cmd = "";
 			
-			axisX.moveTo(minX - 15, midY);	// axis line
-			axisX.lineTo(maxX, midY);
+			// Set path attributes
+			axes.setAttributeNS(null, "class", "axes");
+			axes.setAttributeNS(null, "stroke", __settings.color.axis);
+			axes.setAttributeNS(null, "stroke-width", __settings.layout.axisWidth);
+			axes.setAttributeNS(null, "stroke-lineCap", "round");
+			axes.setAttributeNS(null, "fill", "none");
 			
-			axisX.moveTo(maxX - 5, midY - 5);	// axis arrow
-			axisX.lineTo(maxX, midY);
-			axisX.lineTo(maxX - 5, midY + 5);
+			// Define x-axis path
+			cmd += " M " + String(minX - 15) + " " + String(midY);	// axis line
+			cmd += " H " + String(maxX);
 			
-			// plot vertical axis
-			var axisY = new Path2D();
+			cmd += " M " + String(maxX - 5) + " " + String(midY - 5);	// axis arrow
+			cmd += " L " + String(maxX) + " " + String(midY);
+			cmd += " L " + String(maxX - 5) + " " + String(midY + 5);
 			
-			axisY.moveTo(minX, minY);			// axis line
-			axisY.lineTo(minX, maxY);
+			// Define y-axis path
+			cmd += " M " + String(minX) + " " + String(maxY);	// axis line
+			cmd += " V " + String(minX) + " " + String(minY);
 			
-			axisY.moveTo(minX - 5, minY + 5);	// axis arrow
-			axisY.lineTo(minX, minY);
-			axisY.lineTo(minX + 5, minY + 5);
+			cmd += " M " + String(minX - 5) + " " + String(minY + 5);	// axis arrow
+			cmd += " L " + String(minX) + " " + String(minY);
+			cmd += " L " + String(minX + 5) + " " + String(minY + 5);
 			
-			// set line style
-			context.save();
-				
-			context.shadowOffsetX = 2;
-			context.shadowOffsetY = 2;
-			context.shadowBlur = 2;
-			context.shadowColor = "rgba(0,0,0,0.2)";
+			// Append axes to SVG
+			axes.setAttributeNS(null, "d", cmd);
+			__main.svg.appendChild(axes);
 			
-			context.strokeStyle = __settings.color.axis;
-			context.lineWidth = __settings.layout.axisWidth;
-			context.lineCap = "round";
-			
-			// trace axes
-			context.stroke(axisX);
-			context.stroke(axisY);
-			
-			// restore previous style
-			context.restore();
+			// TODO: Axis drop shadows?
 		},
 		
 		
@@ -1222,8 +1220,8 @@
 		 */
 		updateGrid: function() {
 			// Get spacing between first and last axis subdivisions
-			this.grid.delta.x = this.graph.axisPts.maxX - this.graph.axisPts.minX - 2*__settings.graph.period.x;
-			this.grid.delta.y = this.graph.axisPts.midY - this.graph.axisPts.minY - 2*__settings.graph.period.y;
+			this.grid.delta.x = this.axisPts.maxX - this.axisPts.minX - 2*__settings.graph.period.x;
+			this.grid.delta.y = this.axisPts.midY - this.axisPts.minY - 2*__settings.graph.period.y;
 			
 			// Get number of axis subdivisions to display
 			this.grid.count.x = Math.floor(this.grid.delta.x / (__settings.graph.period.x));
@@ -1231,12 +1229,12 @@
 			
 			// Avoid repeating subdivisions by limiting count to startValue - endValue
 			// TODO: Implement endValue
-			if (this.grid.count.x > (this.plotData.xAttr.max - __settings.graph.startValue.x)) {
-				this.grid.count.x = Math.ceil(this.plotData.xAttr.max - __settings.graph.startValue.x);
+			if (this.grid.count.x > (__plotData.xAttr.max - __settings.graph.startValue.x)) {
+				this.grid.count.x = Math.ceil(__plotData.xAttr.max - __settings.graph.startValue.x);
 			}
 			
-			if (this.grid.count.y > (this.plotData.yAttr.max - __settings.graph.startValue.y)) {
-				this.grid.count.y = Math.ceil(this.plotData.yAttr.max - __settings.graph.startValue.y);
+			if (this.grid.count.y > (__plotData.yAttr.max - __settings.graph.startValue.y)) {
+				this.grid.count.y = Math.ceil(__plotData.yAttr.max - __settings.graph.startValue.y);
 			}
 			
 			console.log(this.grid.count);
@@ -1247,12 +1245,12 @@
 			
 			// Get period (i.e. number of data units per axis subdivision)
 			// TODO: Implement automatic minimum (i.e. if lowest value >> 0, use lowest value on axis)
-			if (this.plotData.pts.length > 0) {
+			if (__plotData.pts.length > 0) {
 				if (__settings.graph.endValue.x !== 0) { var maxValueX = __settings.graph.endValue.x; }
-				else { var maxValueX = this.plotData.xAttr.max; }
+				else { var maxValueX = __plotData.xAttr.max; }
 				
 				if (__settings.graph.endValue.y !== 0) { var maxValueY = __settings.graph.endValue.y; }
-				else { var maxValueY = this.plotData.yAttr.max; }
+				else { var maxValueY = __plotData.yAttr.max; }
 				
 				this.grid.period.x = (maxValueX - __settings.graph.startValue.x) / this.grid.count.x;
 				this.grid.period.y = (maxValueY - __settings.graph.startValue.y) / this.grid.count.y;
