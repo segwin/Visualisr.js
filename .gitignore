@@ -2,7 +2,5 @@
 *.pyc
 *.pyo
 *.project
-css/*
-js/*
-index.html
+
 

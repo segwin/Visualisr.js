@@ -9,9 +9,6 @@
 	// Get root (window in browser)
 	var root = this;
 	
-	// Assign XML namespace to global variable
-	var xmlns = "http://www.w3.org/2000/svg";
-	
 	/**
 	 * Object alises
 	 * Variables prefixed with '__' represent objects (**not** classes) in the Visualisr instance.
@@ -24,11 +21,12 @@
 		__table,
 		__plotData,
 		__graph,
+		__grid,
 		__util,
 		__settings;
 	
 	// Use global variable Visualisr as base class
-	var Visualisr = function(container) {
+	var Visualisr = function(context) {
 		// Clone settings
 		this.cloneSettings();
 		
@@ -36,8 +34,8 @@
 		__main = this;
 		__table = this.table = new Table();
 		__plotData = this.plotData = new PlotData();
-		__graph = this.graph = new Graph(container);
-		__svg = this.svg;
+		__graph = this.graph = new Graph(context);
+		__grid = this.grid = new Grid();
 		
 		// Other properties
 		this.graph.period = new Pair(0,0);
@@ -58,36 +56,18 @@
 			if (typeof Visualisr.instanceCounter !== "undefined") { Visualisr.instanceCounter++; }
 			else { Visualisr.instanceCounter = 1; }
 			
-			// Initialise SVG element
-			this.initSVG();
-			
 			// Optional functions based on config settings
 			if (__settings.display.fillParent) { this.graph.fillParent(); }
 		},
 		
 		/**
-		 * Method: this.addSVG()
-		 * Adds the SVG element to the graph container.
+		 * Method: this.addWrapper()
+		 * Adds a wrapper around the graph DOM element for other methods (e.g. the Table.addTable
+		 * method, which adds a table element to that wrapper)
 		 */
-		initSVG: function() {
-			this.svg = document.createElementNS(xmlns, "svg");
-			
-			this.svg.setAttributeNS(null, "id", "visualisr-graph-" + Visualisr.instanceCounter);
-			this.svg.setAttributeNS(null, "version", "1.1");
-			this.svg.setAttributeNS(null, "baseProfile", "full");
-			this.svg.setAttributeNS(null, "width", String(this.graph.container.offsetWidth));
-			this.svg.setAttributeNS(null, "height", String(this.graph.container.offsetHeight));
-			
-			// Add SVG element to page
-			this.graph.container.appendChild(this.svg);
-			this.svg = document.getElementById("visualisr-graph-" + Visualisr.instanceCounter);
-			
-			// Update axis pts
-			this.graph.updateAxisPts();
-			this.graph.updateGrid();
-			
-			// Draw basic elements
-			this.draw.axes();
+		addWrapper: function() {
+			var wrapper = document.createElement("div");
+			var canvas = this.graph.canvas;
 		},
 		
 		/**
@@ -177,26 +157,69 @@
 		 */
 		redraw: function() {
 			console.log("Redrawing");
-			$(this.svg).empty();
-			
-			this.plotData.updateAttr();
 			this.graph.updateAxisPts();
-			this.graph.updateGrid();
+			this.updateGrid();
 			
 			// Check if plotData.title is a non-empty string. If valid, draw it.
 			if (typeof this.plotData.title === "string" && this.plotData.title.length > 0) {
-//				this.draw.title();
+				this.draw.title();
 			}
+			this.graph.updateAxisPts();
+			this.updateGrid();
 			
 			// Check if plotData.pts contains points. If so, draw them.
 			if (this.plotData.pts.length > 0) {
-//				this.draw.points();
+				this.draw.points();
 			}
 			
 			// Draw basic graph elements
 			this.draw.axes();
 			this.draw.axisNotation();
 			this.draw.labels();
+		},
+		
+		// TODO: Describe me
+		/**
+		 * Method: this.updateGrid()
+		 * 
+		 */
+		updateGrid: function() {
+			// Get spacing between first and last axis subdivisions
+			this.grid.delta.x = this.graph.axisPts.maxX - this.graph.axisPts.minX - 2*__settings.graph.period.x;
+			this.grid.delta.y = this.graph.axisPts.midY - this.graph.axisPts.minY - 2*__settings.graph.period.y;
+			
+			// Get number of axis subdivisions to display
+			this.grid.count.x = Math.floor(this.grid.delta.x / (__settings.graph.period.x));
+			this.grid.count.y = Math.floor(this.grid.delta.y / (__settings.graph.period.y));
+			
+			// Avoid repeating subdivisions by limiting count to startValue - endValue
+			// TODO: Implement endValue
+			if (this.grid.count.x > (this.plotData.xAttr.max - __settings.graph.startValue.x)) {
+				this.grid.count.x = Math.ceil(this.plotData.xAttr.max - __settings.graph.startValue.x);
+			}
+			
+			if (this.grid.count.y > (this.plotData.yAttr.max - __settings.graph.startValue.y)) {
+				this.grid.count.y = Math.ceil(this.plotData.yAttr.max - __settings.graph.startValue.y);
+			}
+			
+			console.log(this.grid.count);
+			
+			// Get spacing (__grid.spacing != __settings.graph.spacing due to cumulative rounding effects)
+			this.grid.spacing.x = Math.round(this.grid.delta.x / this.grid.count.x);
+			this.grid.spacing.y = Math.round(this.grid.delta.y / this.grid.count.y);
+			
+			// Get period (i.e. number of data units per axis subdivision)
+			// TODO: Implement automatic minimum (i.e. if lowest value >> 0, use lowest value on axis)
+			if (this.plotData.pts.length > 0) {
+				if (__settings.graph.endValue.x !== 0) { var maxValueX = __settings.graph.endValue.x; }
+				else { var maxValueX = this.plotData.xAttr.max; }
+				
+				if (__settings.graph.endValue.y !== 0) { var maxValueY = __settings.graph.endValue.y; }
+				else { var maxValueY = this.plotData.yAttr.max; }
+				
+				this.grid.period.x = (maxValueX - __settings.graph.startValue.x) / this.grid.count.x;
+				this.grid.period.y = (maxValueY - __settings.graph.startValue.y) / this.grid.count.y;
+			}
 		},
 		
 	};
@@ -286,8 +309,8 @@
 			
 			// Draw each point
 			for (i = 0; i < __main.plotData.pts.length; i++) {
-				var pxPerUnitX = __main.graph.grid.spacing.x / __main.graph.grid.period.x;
-				var pxPerUnitY = __main.graph.grid.spacing.y / __main.graph.grid.period.y;
+				var pxPerUnitX = __main.grid.spacing.x / __main.grid.period.x;
+				var pxPerUnitY = __main.grid.spacing.y / __main.grid.period.y;
 				
 				// Get position relative to the minimum (first notch on the axis)
 				x = __main.plotData.pts[i].x - __settings.graph.startValue.x;
@@ -347,11 +370,6 @@
 			if (index == end) {
 				__main.graph.context.save();
 				
-				__main.graph.context.shadowOffsetX = 2;
-				__main.graph.context.shadowOffsetY = 2;
-				__main.graph.context.shadowBlur = 2;
-				__main.graph.context.shadowColor = "rgba(0,0,0,0.2)";
-				
 				__main.graph.context.lineJoin = "round";
 				__main.graph.context.lineWidth = 2;
 				
@@ -376,11 +394,6 @@
 			if (index == end) {
 				__main.graph.context.save();
 				
-				__main.graph.context.shadowOffsetX = 2;
-				__main.graph.context.shadowOffsetY = 2;
-				__main.graph.context.shadowBlur = 2;
-				__main.graph.context.shadowColor = "rgba(0,0,0,0.2)";
-				
 				__main.graph.context.fillStyle = __settings.color.plot;
 				__main.graph.context.fill(path);
 				
@@ -393,6 +406,8 @@
 		 * Draws axes onto graph
 		 */
 		axes: function() {
+			var context = __main.graph.context;
+			
 			var maxX = __main.graph.axisPts.maxX;
 			var minX = __main.graph.axisPts.minX;
 			
@@ -400,38 +415,39 @@
 			var midY = __main.graph.axisPts.midY;
 			var minY = __main.graph.axisPts.minY;
 			
-			// Define axes element
-			var axes = document.createElementNS(xmlns, "path");
-			var cmd = "";
+			// plot horizontal axis
+			var axisX = new Path2D();
 			
-			// Set path attributes
-			axes.setAttributeNS(null, "class", "visualisr-axes");
-			axes.setAttributeNS(null, "stroke", __settings.color.axis);
-			axes.setAttributeNS(null, "stroke-width", __settings.layout.axisWidth);
-			axes.setAttributeNS(null, "stroke-lineCap", "round");
-			axes.setAttributeNS(null, "fill", "none");
+			axisX.moveTo(minX - 15, midY);	// axis line
+			axisX.lineTo(maxX, midY);
 			
-			// Define x-axis path
-			cmd += " M " + String(minX - 15) + " " + String(midY);	// axis line
-			cmd += " H " + String(maxX);
+			axisX.moveTo(maxX - 5, midY - 5);	// axis arrow
+			axisX.lineTo(maxX, midY);
+			axisX.lineTo(maxX - 5, midY + 5);
 			
-			cmd += " M " + String(maxX - 5) + " " + String(midY - 5);	// axis arrow
-			cmd += " L " + String(maxX) + " " + String(midY);
-			cmd += " L " + String(maxX - 5) + " " + String(midY + 5);
+			// plot vertical axis
+			var axisY = new Path2D();
 			
-			// Define y-axis path
-			cmd += " M " + String(minX) + " " + String(maxY);	// axis line
-			cmd += " V " + String(minX) + " " + String(minY);
+			axisY.moveTo(minX, minY);			// axis line
+			axisY.lineTo(minX, maxY);
 			
-			cmd += " M " + String(minX - 5) + " " + String(minY + 5);	// axis arrow
-			cmd += " L " + String(minX) + " " + String(minY);
-			cmd += " L " + String(minX + 5) + " " + String(minY + 5);
+			axisY.moveTo(minX - 5, minY + 5);	// axis arrow
+			axisY.lineTo(minX, minY);
+			axisY.lineTo(minX + 5, minY + 5);
 			
-			// Append axes to SVG
-			axes.setAttributeNS(null, "d", cmd);
-			__main.svg.appendChild(axes);
+			// set line style
+			context.save();
 			
-			// TODO: Axis drop shadows?
+			context.strokeStyle = __settings.color.axis;
+			context.lineWidth = __settings.layout.axisWidth;
+			context.lineCap = "round";
+			
+			// trace axes
+			context.stroke(axisX);
+			context.stroke(axisY);
+			
+			// restore previous style
+			context.restore();
 		},
 		
 		
@@ -440,6 +456,9 @@
 			// TODO: Set max amount of data points (if above threshold, use only every nth data where n = ceil(threshold/nData) )
 			// TODO: Do not mirror y axis; only label positive half UNLESS __settings.graph.negativeValues === true
 			
+			var context = __main.graph.context;
+			var plotData = __main.plotData;
+			
 			var maxX = __main.graph.axisPts.maxX;
 			var minX = __main.graph.axisPts.minX;
 			
@@ -447,105 +466,73 @@
 			var midY = __main.graph.axisPts.midY;
 			var minY = __main.graph.axisPts.minY;
 			
-			// context.font = __settings.font.auto.axis;
-			// context.textAlign = "right";
-			// context.strokeStyle = __settings.color.axis;
-			// context.fillStyle = __settings.color.axis;
+			context.font = __settings.font.auto.axis;
+			context.textAlign = "right";
+			context.strokeStyle = __settings.color.axis;
+			context.fillStyle = __settings.color.axis;
 			
-			// Create elements
-			var subdivs = document.createElementNS(xmlns, "path");
-			var cmd = "";
-			
-			// Set subdivs attributes
-			subdivs.setAttributeNS(null, "class", "visualisr-axis-subdivs");
-			subdivs.setAttributeNS(null, "stroke", __settings.color.axis);
-			subdivs.setAttributeNS(null, "stroke-width", __settings.layout.axisWidth/2);
-			subdivs.setAttributeNS(null, "stroke-lineCap", "round");
-			subdivs.setAttributeNS(null, "fill", "none");
-			
-			// Numbering element generator
-			var makeNumberingElement = function() {
-				var numbering = document.createElementNS(xmlns, "text");
-				
-				// Set attributes
-				numbering.setAttributeNS(null, "class", "visualisr-axis-numbering");
-				numbering.setAttributeNS(null, "font-family", __settings.font.face);
-				numbering.setAttributeNS(null, "font-size", __settings.font.axisSize);
-				numbering.setAttributeNS(null, "fill", __settings.color.axis);
-				numbering.setAttributeNS(null, "text-anchor", "end");
-				
-				return numbering;
-			};
+			// set shadow style
+			context.save();
 			
 			// Notate x axis
-			for (i=1; i <= __main.graph.grid.count.x; i++) {
-				var numbering = makeNumberingElement();
+			for (i=1; i <= __main.grid.count.x; i++) {
+				var notch = new Path2D();
 				
 				// Coordinates
-				var x = minX + i * __main.graph.grid.spacing.x + 0.5*__settings.font.axisSize;
-				var y = midY + 1.5*__settings.font.axisSize;
+				var x = minX + i * __main.grid.spacing.x;
+				var y = midY + 2*__settings.font.axisSize;
 				
 				// Draw notch
-				cmd += " M " + String(x) + " " + String(midY - 6);
-				cmd += " V " + String(midY + 6);
+				notch.moveTo(x, midY - 6);
+				notch.lineTo(x, midY + 6);
+				context.stroke(notch);
+				
+				// Rotate canvas for numbering (45° counterclockwise)
+				var theta = Math.PI/4;
+				context.rotate(-theta);
 				
 				// Draw number if available
-				if (__plotData.pts.length > 0) {
-					numbering.setAttributeNS(null, "x", x);
-					numbering.setAttributeNS(null, "y", y);
-					numbering.setAttributeNS(null, "transform", "rotate(-45 " + String(x) + "," + String(y) + ")");
-					
-					// Calculate and add number
+				if (plotData.pts.length > 0) {
 					var decimals = Math.pow(10, __settings.graph.roundAt.x);
-					var number = Math.round(decimals * i * __main.graph.grid.period.x) / decimals;
+					var number = Math.round(decimals * i * __main.grid.period.x) / decimals;
 						number += __settings.graph.startValue.x;
 					
-					// TODO: Find polyfill for .textContent in IE<9
-					numbering.textContent = number;
-					
-					// Add numbering immediately (allows object reuse)
-					__main.svg.appendChild(numbering);
+					context.fillText(number, (x - y + 5)*Math.cos(theta), (x + y)*Math.sin(theta));
 				}
 				
+				// Rotate canvas back to 0°
+				context.rotate(theta);
 			}
 			
 			// notate y axis
-			for (j=1; j <= __main.graph.grid.count.y; j++) {
-				var numbering = makeNumberingElement();
+			for (j=1; j <= __main.grid.count.y; j++) {
+				var notch = new Path2D();
 				
 				var x = minX - __settings.font.axisSize;
-				var yPos = midY - j*__main.graph.grid.spacing.y;
-				var yNeg = midY + j*__main.graph.grid.spacing.y;
+				var yPos = midY - j*__main.grid.spacing.y;
+				var yNeg = midY + j*__main.grid.spacing.y;
 				
-				cmd += " M " + String(minX - 5) + " " + String(yPos);	// positive values
-				cmd += " H " + String(minX + 5);
-				// cmd += " M " + String(minX - 5) + " " + String(yNeg);	// negative values
-				// cmd += " H " + String(minX + 5);
+				notch.moveTo(minX - 5, yPos);	// positive values
+				notch.lineTo(minX + 5, yPos);
+				notch.moveTo(minX - 5, yNeg);	// negative values
+				notch.lineTo(minX + 5, yNeg);
+				context.stroke(notch);
 				
 				// TODO: Add padding to left if numbers are too long (overlaps border)
 				
 				// Draw number if available
-				if (__plotData.pts.length > 0) {
-					numbering.setAttributeNS(null, "x", x);
-					numbering.setAttributeNS(null, "y", yPos + __settings.font.axisSize/2.5);
-					// numbering.setAttributeNS(null, "transform", "rotate(-45 " + String(x) + "," + String(yNeg + 5) + ")");
-					
-					// Calculate and add number
+				if (plotData.pts.length > 0) {
 					var decimals = Math.pow(10, __settings.graph.roundAt.x);
-					var number = Math.round(decimals * j * __main.graph.grid.period.y) / decimals;
+					var number = Math.round(decimals * j * __main.grid.period.y) / decimals;
 						number += __settings.graph.startValue.y;
-					
-					// TODO: Find polyfill for .textContent in IE<9
-					numbering.textContent = number;
-					
-					// Add numbering immediately (allows object reuse)
-					__main.svg.appendChild(numbering);
+									
+					context.fillText(number, x, yPos + 5);
+					context.fillText(number, x, yNeg + 5);
 				}
 			}
 			
-			subdivs.setAttributeNS(null, "d", cmd);
-			__main.svg.appendChild(subdivs);
-			
+			// restore context state
+			context.restore();
 		},
 		
 		/**
@@ -553,37 +540,20 @@
 		 * Draws axis labels onto graph
 		 */
 		labels: function() {
-			// Label element generator
-			var makeLabelElement = function(textAnchor) {
-				var label = document.createElementNS(xmlns, "text");
-				
-				// Set xlabel attributes
-				label.setAttributeNS(null, "class", "visualisr-axis-label");
-				label.setAttributeNS(null, "font-family", __settings.font.face);
-				label.setAttributeNS(null, "font-size", __settings.font.axisLabelSize);
-				label.setAttributeNS(null, "fill", __settings.color.axis);
-				label.setAttributeNS(null, "text-anchor", textAnchor);
-				
-				return label;
-			};
+			var context = __main.graph.context;
 			
-			// x label
-			var xlabel = makeLabelElement("end");
+			var xlabel = __main.plotData.xlabel;
+			var ylabel = __main.plotData.ylabel;
 			
-			xlabel.setAttributeNS(null, "x", __main.graph.axisPts.maxX);
-			xlabel.setAttributeNS(null, "y", __main.graph.axisPts.midY - 15);
+			// add axis labels
+			context.font = __settings.font.auto.axisLabel;
+			context.fillStyle = __settings.color.axis;
 			
-			xlabel.textContent = __main.plotData.xlabel;
-			__main.svg.appendChild(xlabel);
+			context.textAlign = "right";
+			context.fillText(xlabel, __main.graph.axisPts.maxX, __main.graph.axisPts.midY - 15);
 			
-			// y label
-			var ylabel = makeLabelElement("start");
-			
-			ylabel.setAttributeNS(null, "x", __main.graph.axisPts.minX + 15);
-			ylabel.setAttributeNS(null, "y", __main.graph.axisPts.minY + 0.75*__settings.font.axisLabelSize);
-			
-			ylabel.textContent = __main.plotData.ylabel;
-			__main.svg.appendChild(ylabel);
+			context.textAlign = "left";
+			context.fillText(ylabel, __main.graph.axisPts.minX + 15, __main.graph.axisPts.minY + __settings.font.axisLabelSize);
 		},
 		
 	};
@@ -1054,9 +1024,10 @@
 	 * frontend portion of the app. It stores the canvas attributes and has methods to control
 	 * the display of the graph on the page.
 	 */
-	var Graph = Visualisr.Graph = function(container) {
-		// Container
-		this.container = container;
+	var Graph = Visualisr.Graph = function(context) {
+		// Context
+		this.context = context;
+		this.canvas = context.canvas;
 		
 		// Layout
 		this.grid = new Grid();
@@ -1081,15 +1052,15 @@
 		 */
 		init: function() {
 			// Apply correction factor for device pixel ratio
-//			this.getPixelRatio();
-//			this.applyPixelRatio();
+			this.getPixelRatio();
+			this.applyPixelRatio();
 			
 			// Apply __settings.display.scaleAll factor to layout
 			this.scaleLayout();
 			
 			// Set canvas style
-			this.container.style.backgroundColor = __settings.color.bg;
-			this.container.style.border = __settings.layout.borderSize + "px " + __settings.color.borderType + " " + __settings.color.borderColor;
+			this.canvas.style.backgroundColor = __settings.color.bg;
+			this.canvas.style.border = __settings.layout.borderSize + "px " + __settings.color.borderType + " " + __settings.color.borderColor;
 			
 			// Build font strings
 			this.scaleFont();
@@ -1103,37 +1074,35 @@
 		 * Method: this.applyPixelRatio()
 		 * Scale pixel-sized elements by 1.5x the device pixel ratio.
 		 */ 
-		// TODO: Either remove or modify depending on need (does SVG need a pixel ratio function?)
-		// applyPixelRatio: function() {
-			// // Apply scaling if necessary
-			// if (__settings.display.auto.pixelRatio != 1) {
-				// var ratio = __settings.display.auto.pixelRatio / 1.5;
-// 				
-				// __settings.layout.padding /= ratio;
-				// __settings.layout.axisWidth /= ratio;
-				// __settings.graph.period.x /= ratio;
-				// __settings.graph.period.y /= ratio;
-// 				
-				// __settings.font.scaleText /= ratio;
-			// }
-		// },
+		applyPixelRatio: function() {
+			// Apply scaling if necessary
+			if (__settings.display.auto.pixelRatio != 1) {
+				var ratio = __settings.display.auto.pixelRatio / 1.5;
+				
+				__settings.layout.padding /= ratio;
+				__settings.layout.axisWidth /= ratio;
+				__settings.graph.period.x /= ratio;
+				__settings.graph.period.y /= ratio;
+				
+				__settings.font.scaleText /= ratio;
+			}
+		},
 		
 		/**
 		 * Method: this.clear()
 		 * Clears the entire graph. Useful before a complete graph redraw.
 		 */
-		// TODO: Either remove or modify depending on need (does SVG need a clear function?)
-		// clear: function() {
-			// // Save canvas state, then apply identity matrix
-		    // this.context.save();
-		    // this.context.setTransform(__settings.display.auto.pixelRatio, 0, 0, __settings.display.auto.pixelRatio, 0, 0);
-// 		    
-		    // // Clear
-			// this.context.clearRect(0, 0, this.canvas.offsetWidth, this.canvas.offsetHeight);
-// 			
-			// // Restore canvas state
-		    // this.context.restore();
-		// },
+		clear: function() {
+			// Save canvas state, then apply identity matrix
+		    this.context.save();
+		    this.context.setTransform(__settings.display.auto.pixelRatio, 0, 0, __settings.display.auto.pixelRatio, 0, 0);
+		    
+		    // Clear
+			this.context.clearRect(0, 0, this.canvas.offsetWidth, this.canvas.offsetHeight);
+			
+			// Restore canvas state
+		    this.context.restore();
+		},
 		
 		/**
 		 * Method: this.fillParent()
@@ -1146,14 +1115,14 @@
 			var pixelRatio = __settings.display.auto.pixelRatio;
 		    
 			// Get parent element dimensions
-			w = this.container.parentElement.offsetWidth;
-			h = this.container.parentElement.offsetHeight;
+			w = this.canvas.parentElement.offsetWidth;
+			h = this.canvas.parentElement.offsetHeight;
 			
 			// Set new canvas dimensions
-			this.container.width = w;
-			this.container.height = h;
-			this.container.style.width = w + "px";
-			this.container.style.height = h + "px";
+			this.canvas.width = pixelRatio * w;
+			this.canvas.height = pixelRatio * h;
+			this.canvas.style.width = w + "px";
+			this.canvas.style.height = h + "px";
 			
 			// Get new axis points
 			this.updateAxisPts();
@@ -1178,7 +1147,7 @@
 				} else {
 					timeout = false;
 					graph.fillParent();
-					// TODO: __main.redraw();
+					__main.redraw();
 				}
 			}
 		},
@@ -1188,18 +1157,17 @@
 		 * Get the pixel ratio to apply to the canvas element (device pixel ratio over canvas
 		 * pixel ratio)
 		 */ 
-		// TODO: Remove or modify for SVG
-		// getPixelRatio: function() {
-		    // var ctx = document.createElement("canvas").getContext("2d"),
-		        // dpr = window.devicePixelRatio || 1,
-		        // bsr = ctx.webkitBackingStorePixelRatio ||
-		              // ctx.mozBackingStorePixelRatio ||
-		              // ctx.msBackingStorePixelRatio ||
-		              // ctx.oBackingStorePixelRatio ||
-		              // ctx.backingStorePixelRatio || 1;
-// 		
-		    // __settings.display.auto.pixelRatio = dpr / bsr;
-		// },
+		getPixelRatio: function() {
+		    var ctx = document.createElement("canvas").getContext("2d"),
+		        dpr = window.devicePixelRatio || 1,
+		        bsr = ctx.webkitBackingStorePixelRatio ||
+		              ctx.mozBackingStorePixelRatio ||
+		              ctx.msBackingStorePixelRatio ||
+		              ctx.oBackingStorePixelRatio ||
+		              ctx.backingStorePixelRatio || 1;
+		
+		    __settings.display.auto.pixelRatio = dpr / bsr;
+		},
 		
 		/**
 		 * Method: this.makeFontStrings()
@@ -1246,63 +1214,32 @@
 		},
 		
 		/**
+		 * Method: this.setWidth()
+		 * Changes the stored canvas width value and updates the width of the graph on the page.
+		 */
+		setWidth: function(w) {
+			// TODO
+		},
+		
+		/**
 		 * Method: this.updateAxisPts()
 		 * Calculates the important axis points in function of the current canvas dimensions
 		 */
 		updateAxisPts: function() {
 			var padding = __settings.layout.padding;
+			var pixelRatio = __settings.display.auto.pixelRatio;
+			
+			// Reset canvas transforms
+			this.context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 			
 			// Get axis points
-			this.axisPts.maxX = Math.floor(this.container.offsetWidth - 2*padding);
+			this.axisPts.maxX = Math.floor(this.canvas.offsetWidth - 2*padding);
 			this.axisPts.midX = Math.floor(this.axisPts.maxX/2);
 			this.axisPts.minX = Math.floor(padding);
 			
-			this.axisPts.maxY = Math.floor(this.container.offsetHeight + 2*padding) - 1.5*__settings.display.auto.titleHeight;
+			this.axisPts.maxY = Math.floor(this.canvas.offsetHeight + 2*padding) - 1.5*__settings.display.auto.titleHeight;
 			this.axisPts.midY = Math.floor(this.axisPts.maxY/2);
 			this.axisPts.minY = Math.floor(padding);
-		},
-		
-		// TODO: Describe me
-		/**
-		 * Method: this.updateGrid()
-		 * 
-		 */
-		updateGrid: function() {
-			// Get spacing between first and last axis subdivisions
-			this.grid.delta.x = this.axisPts.maxX - this.axisPts.minX - 1.5*__settings.graph.period.x;
-			this.grid.delta.y = this.axisPts.midY - this.axisPts.minY - 1.5*__settings.graph.period.y;
-			
-			// Get number of axis subdivisions to display
-			this.grid.count.x = Math.floor(this.grid.delta.x / (__settings.graph.period.x));
-			this.grid.count.y = Math.floor(this.grid.delta.y / (__settings.graph.period.y));
-			
-			// Avoid repeating subdivisions by limiting count to startValue - endValue
-			if (this.grid.count.x > (__plotData.xAttr.max - __settings.graph.startValue.x)) {
-				this.grid.count.x = Math.ceil(__plotData.xAttr.max - __settings.graph.startValue.x);
-			}
-			
-			if (this.grid.count.y > (__plotData.yAttr.max - __settings.graph.startValue.y)) {
-				this.grid.count.y = Math.ceil(__plotData.yAttr.max - __settings.graph.startValue.y);
-			}
-			
-			console.log(this.grid.count);
-			
-			// Get spacing (__grid.spacing != __settings.graph.spacing due to cumulative rounding effects)
-			this.grid.spacing.x = Math.round(this.grid.delta.x / this.grid.count.x);
-			this.grid.spacing.y = Math.round(this.grid.delta.y / this.grid.count.y);
-			
-			// Get period (i.e. number of data units per axis subdivision)
-			// TODO: Implement automatic minimum (i.e. if lowest value >> 0, use lowest value on axis)
-			if (__plotData.pts.length > 0) {
-				if (__settings.graph.endValue.x !== 0) { var maxValueX = __settings.graph.endValue.x; }
-				else { var maxValueX = __plotData.xAttr.max; }
-				
-				if (__settings.graph.endValue.y !== 0) { var maxValueY = __settings.graph.endValue.y; }
-				else { var maxValueY = __plotData.yAttr.max; }
-				
-				this.grid.period.x = (maxValueX - __settings.graph.startValue.x) / this.grid.count.x;
-				this.grid.period.y = (maxValueY - __settings.graph.startValue.y) / this.grid.count.y;
-			}
 		},
 		
 	};
