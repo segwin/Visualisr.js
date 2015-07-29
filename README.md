@@ -9,6 +9,6 @@ Open-source graphing webapp with optional CSV import capabilities. Built using J
 
 #### API
 
-- [Options](https://github.com/segwin/Visualisr.js/master/blob/docs/API-Options.md)
-- [Methods](https://github.com/segwin/Visualisr.js/master/blob/docs/API-Methods.md)
-- [Classes](https://github.com/segwin/Visualisr.js/master/blob/docs/API-Classes.md)
+- [Options](https://github.com/segwin/Visualisr.js/blob/master/docs/API-Options.md)
+- [Methods](https://github.com/segwin/Visualisr.js/blob/master/docs/API-Methods.md)
+- [Classes](https://github.com/segwin/Visualisr.js/blob/master/docs/API-Classes.md)
