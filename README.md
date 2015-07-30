@@ -14,6 +14,7 @@ As of July 30, 2015: **Not ready for production**
   - Animations and graph interactivity
   - User-facing data entry module
   - Many supporting methods
+  - Removing jQuery dependencies
 
 ## Documentation
 
